@@ -64,15 +64,15 @@ int main(int argc, char *argv[])
         double timeStart = MPI_Wtime();
         Settings settings(argc, argv, rank, nproc);
         HeatTransfer ht(settings);
-        IO io(settings, mpiHeatTransferComm);
+        //IO io(settings, mpiHeatTransferComm);
 
-        ht.init(false);
+        ht.init(true);
         // ht.printT("Initialized T:", mpiHeatTransferComm);
         ht.heatEdges();
         ht.exchange(mpiHeatTransferComm);
         // ht.printT("Heated T:", mpiHeatTransferComm);
 
-        io.write(0, ht, settings, mpiHeatTransferComm);
+        //io.write(0, ht, settings, mpiHeatTransferComm);
 
         for (unsigned int t = 1; t <= settings.steps; ++t)
         {
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
                 ht.heatEdges();
             }
 
-            io.write(t, ht, settings, mpiHeatTransferComm);
+            //io.write(t, ht, settings, mpiHeatTransferComm);
         }
         MPI_Barrier(mpiHeatTransferComm);
 

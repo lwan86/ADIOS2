@@ -45,12 +45,18 @@
 
         <transport type="File">
             
-            <!-- POSIX, stdio (C FILE*), fstream (C++) -->
-            <parameter key="Library" value="POSIX"/>
+            <!-- POSIX, stdio (C FILE*), fstream (C++), Lustre -->
+            <parameter key="Library" value="Lustre"/>
             
             <!-- For read/write, Microseconds (default), Milliseconds, Seconds, 
                  Minutes, Hours. open/close always in Microseconds -->
-            <parameter key="ProfileUnits" value="Microseconds"/>
+            <!-- <parameter key="ProfileUnits" value="Microseconds"/> -->
+            
+            <!--  Lustre specific parameters -->
+            <parameter key="StripeCount" value="1"/>
+            <parameter key="StripeSize" value="1048576"/>
+            <parameter key="StripeOffset" value="0"/>
+            <parameter key="StripePattern" value="1"/>
             
         </transport>
         

@@ -18,12 +18,14 @@ namespace adios2
 {
 namespace transport
 {
+
 class FileLustre : public Transport
 {
 public:
     FileLustre(const size_t stripeSize, const size_t stripeOffset,
                const size_t stripeCount, const size_t stripePattern,
                MPI_Comm mpiComm, const bool debugMode);
+
     ~FileLustre();
 
     void Open(const std::string &name, const Mode openMode) final;
@@ -33,6 +35,8 @@ public:
     void Read(char *buffer, size_t size, size_t start = MaxSizeT) final;
 
     size_t GetSize() final;
+    
+    virtual void Flush() final;
 
     void Close() final;
 

@@ -80,6 +80,7 @@ if(ADIOS2_HAVE_Lustre)
   target_sources(adios2 PRIVATE
     toolkit/transport/file/FileLustre.cpp
   )
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
   target_link_libraries(adios2 PRIVATE lustre::lustre)
 endif()
 

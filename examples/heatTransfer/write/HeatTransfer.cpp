@@ -20,7 +20,7 @@
 
 #include "HeatTransfer.h"
 
-HeatTransfer::HeatTransfer(const Settings &settings) : m_s{settings}
+HeatTransfer::HeatTransfer(const Settings &settings) : m_s(settings)
 {
     m_T1 = new double *[m_s.ndx + 2];
     m_T1[0] = new double[(m_s.ndx + 2) * (m_s.ndy + 2)];
