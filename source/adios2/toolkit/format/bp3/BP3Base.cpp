@@ -102,6 +102,14 @@ void BP3Base::InitParameters(const Params &parameters)
         lf_EmplaceTimer("memcpy");
         lf_EmplaceTimer("minmax");
         lf_EmplaceTimer("meta_sort_merge");
+	//Lipeng
+	/*
+	lf_EmplaceTimer("AggregateIndex");
+	lf_EmplaceTimer("AggregateMergeIndex_var");
+	lf_EmplaceTimer("AggregateMergeIndex_attr");
+	lf_EmplaceTimer("PutMinifooter");
+	*/
+	//Lipeng
         lf_EmplaceTimer("aggregation");
 
         m_Profiler.Bytes.emplace("buffering", 0);
@@ -322,6 +330,14 @@ void BP3Base::InitParameterProfileUnits(const std::string value)
     lf_EmplaceTimer("memcpy", timeUnit);
     lf_EmplaceTimer("minmax", timeUnit);
     lf_EmplaceTimer("meta_sort_merge", timeUnit);
+    //Lipeng
+    /*
+    lf_EmplaceTimer("AggregateIndex", timeUnit);
+    lf_EmplaceTimer("AggregateMergeIndex_var", timeUnit);
+    lf_EmplaceTimer("AggregateMergeIndex_attr", timeUnit);
+    lf_EmplaceTimer("PutMinifooter", timeUnit);
+    */
+    //Lipeng
     lf_EmplaceTimer("aggregation", timeUnit);
 
     m_Profiler.Bytes.emplace("buffering", 0);

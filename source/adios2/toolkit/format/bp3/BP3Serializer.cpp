@@ -16,6 +16,12 @@
 #include <string>
 #include <vector>
 
+//Lipeng
+#include <iostream>
+#include <cstdio>
+#include <ctime>
+//Lipeng
+
 #include "adios2/helper/adiosFunctions.h" //GetType<T>, ReadValue<T>,
                                           // ReduceValue<T>
 
@@ -230,6 +236,15 @@ std::string BP3Serializer::GetRankProfilingJSON(
     lf_WriterTimer(rankLog, profiler.Timers.at("minmax"));
     lf_WriterTimer(rankLog, profiler.Timers.at("meta_sort_merge"));
 
+    //Lipeng
+    /*
+    lf_WriterTimer(rankLog, profiler.Timers.at("AggregateIndex"));
+    lf_WriterTimer(rankLog, profiler.Timers.at("AggregateMergeIndex_var"));
+    lf_WriterTimer(rankLog, profiler.Timers.at("AggregateMergeIndex_attr"));
+    lf_WriterTimer(rankLog, profiler.Timers.at("PutMinifooter"));
+    */
+    //Lipeng
+
     const size_t transportsSize = transportsTypes.size();
 
     for (unsigned int t = 0; t < transportsSize; ++t)
@@ -271,19 +286,46 @@ void BP3Serializer::AggregateCollectiveMetadata()
     ProfilerStart("buffering");
     ProfilerStart("meta_sort_merge");
     const uint64_t pgIndexStart = m_Metadata.m_Position;
+    
+    //ProfilerStart("AggregateIndex"); //Lipeng
+    std::clock_t start_clk, end_clk;
+    double duration;
+    start_clk = std::clock();
     AggregateIndex(m_MetadataSet.PGIndex, m_MetadataSet.DataPGCount);
-
+    end_clk = std::clock();
+    duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC;
+    //std::cout<< "rank " << m_RankMPI <<": AggregateIndex(m_MetadataSet.PGIndex, m_MetadataSet.DataPGCount): " << duration << std::endl;
+    //ProfilerStop("AggregateIndex"); //Lipeng
+    
     const uint64_t variablesIndexStart = m_Metadata.m_Position;
-
+    
+    //ProfilerStart("AggregateMergeIndex_var"); //Lipeng
+    start_clk = std::clock();
     AggregateMergeIndex(m_MetadataSet.VarsIndices);
-
+    end_clk = std::clock();
+    duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC;
+    //std::cout<< "rank " << m_RankMPI <<": AggregateMergeIndex(m_MetadataSet.VarsIndices): " << duration << std::endl;
+    //ProfilerStop("AggregateMergeIndex_var"); //Lipeng
+    
     const uint64_t attributesIndexStart = m_Metadata.m_Position;
+    //ProfilerStart("AggregateMergeIndex_attr"); //Lipeng
+    start_clk = std::clock();    
     AggregateMergeIndex(m_MetadataSet.AttributesIndices);
-
+    end_clk = std::clock();
+    duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC;
+    //std::cout<< "rank " << m_RankMPI <<": AggregateMergeIndex(m_MetadataSet.AttributesIndices): " << duration << std::endl;    
+    //ProfilerStop("AggregateMergeIndex_attr"); //Lipeng
+    
     if (m_RankMPI == 0)
     {
+      //ProfilerStart("PutMinifooter"); //Lipeng
+        start_clk = std::clock();
         PutMinifooter(pgIndexStart, variablesIndexStart, attributesIndexStart,
                       m_Metadata.m_Buffer, m_Metadata.m_Position, true);
+	end_clk = std::clock();
+	duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC;
+	//std::cout<< "rank " << m_RankMPI <<": PutMinifooter(pgIndexStart, variablesIndexStart, ...): " << duration << std::endl;    
+	//ProfilerStop("PutMinifooter"); //Lipeng
         m_Metadata.m_AbsolutePosition = m_Metadata.m_Position;
     }
     ProfilerStop("meta_sort_merge");
@@ -763,26 +805,56 @@ void BP3Serializer::AggregateIndex(const SerialElementIndex &index,
 void BP3Serializer::AggregateMergeIndex(
     const std::unordered_map<std::string, SerialElementIndex> &indices)
 {
+    //Lipeng
+    std::clock_t start_clk, end_clk; 
+    double duration;
+    //Lipeng
     // first serialize index
+    start_clk = std::clock(); //Lipeng
     std::vector<char> serializedIndices = SerializeIndices(indices);
+    end_clk = std::clock(); //Lipeng
+    duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC; //Lipeng
+    if (m_RankMPI == 0)
+      std::cout<< "rank " << m_RankMPI <<": ... = SerializeIndices(indices): " << duration << std::endl; //Lipeng
     // gather in rank 0
     std::vector<char> gatheredSerialIndices;
     size_t gatheredSerialIndicesPosition = 0;
 
+    start_clk = std::clock(); //Lipeng
     GathervVectors(serializedIndices, gatheredSerialIndices,
                    gatheredSerialIndicesPosition, m_MPIComm);
-
+    end_clk = std::clock(); //Lipeng
+    duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC; //Lipeng
+    if (m_RankMPI == 0)
+      std::cout<< "rank " << m_RankMPI <<": GathervVectors(serializedIndices, ...: " << duration << std::endl; //Lipeng
+    
     // deallocate local serialized Indices
+    start_clk = std::clock(); //Lipeng
     std::vector<char>().swap(serializedIndices);
-
+    end_clk = std::clock(); //Lipeng
+    duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC; //Lipeng
+    if (m_RankMPI == 0)    
+      std::cout<< "rank " << m_RankMPI <<": std::vector<char>().swap(serializedIndices): " << duration << std::endl; //Lipeng
+    
     // deserialize in [name][rank] order
+    start_clk = std::clock(); //Lipeng
+    /*slow*/
     const std::unordered_map<std::string, std::vector<SerialElementIndex>>
         nameRankIndices =
-            DeserializeIndicesPerRankThreads(gatheredSerialIndices);
-
+            DeserializeIndicesPerRankThreads(gatheredSerialIndices); 
+    end_clk = std::clock(); //Lipeng
+    duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC; //Lipeng
+    if (m_RankMPI == 0)    
+      std::cout<< "rank " << m_RankMPI <<": ...DeserializeIndicesPerRankThreads(...: " << duration << std::endl; //Lipeng
+    
     // deallocate gathered serial indices (full in rank 0 only)
+    start_clk = std::clock(); //Lipeng  
     std::vector<char>().swap(gatheredSerialIndices);
-
+    end_clk = std::clock(); //Lipeng
+    duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC; //Lipeng
+    if (m_RankMPI == 0)    
+      std::cout<< "rank " << m_RankMPI <<": ...).swap(gatheredSerialIndices): " << duration << std::endl; //Lipeng
+    
     if (m_RankMPI == 0)
     {
         // to write count and length
@@ -792,15 +864,28 @@ void BP3Serializer::AggregateMergeIndex(
 
         // Write count
         position += 12;
+	start_clk = std::clock(); //Lipeng
+	/*slow*/
         m_Metadata.Resize(position + gatheredSerialIndicesPosition +
                               m_MetadataSet.MiniFooterSize,
                           ", in call to AggregateMergeIndex BP3 metadata");
+	end_clk = std::clock(); //Lipeng
+	duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC; //Lipeng
+	if (m_RankMPI == 0)
+	  std::cout<< "rank " << m_RankMPI <<": m_Metadata.Resize(position...: " << duration << std::endl; //Lipeng
+    
         const uint32_t totalCountU32 =
             static_cast<uint32_t>(nameRankIndices.size());
         CopyToBuffer(buffer, countPosition, &totalCountU32);
 
+	start_clk = std::clock(); //Lipeng
+	/*slow*/
         MergeSerializeIndices(nameRankIndices);
-
+	end_clk = std::clock(); //Lipeng	
+	duration = (end_clk-start_clk)/(double) CLOCKS_PER_SEC; //Lipeng
+	if (m_RankMPI == 0)
+	  std::cout<< "rank " << m_RankMPI <<": MergeSerializeIndices(nameRankIndices): " << duration << std::endl; //Lipeng
+    
         // Write length
         const uint64_t totalLengthU64 =
             static_cast<uint64_t>(position - countPosition - 8);
