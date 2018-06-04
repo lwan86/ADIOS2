@@ -15,6 +15,7 @@
 #include <future>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "adios2/helper/adiosFunctions.h" //GetType<T>, ReadValue<T>,
                                           // ReduceValue<T>
@@ -1238,6 +1239,7 @@ void BP3Serializer::MergeSerializeIndices(
             firstRank = r;
 
             headerSize = position;
+            std::cout << "headerSize: " << headerSize << std::endl;
             break;
         }
 
@@ -1260,6 +1262,7 @@ void BP3Serializer::MergeSerializeIndices(
                 continue;
             }
             positions[r] = headerSize;
+            std::cout << "rank: " << r << ", positions[r]: " << positions[r] << std::endl;
         }
 
         uint64_t setsCount = 0;
@@ -1282,6 +1285,7 @@ void BP3Serializer::MergeSerializeIndices(
                 }
 
                 auto &position = positions[r];
+                std::cout << "rank: " << r << ", positions[r]: " << positions[r] << ", position: " << position << ", buffer.size(): " << buffer.size() << std::endl;
                 if (position < buffer.size())
                 {
                     marching = true;
@@ -1295,12 +1299,16 @@ void BP3Serializer::MergeSerializeIndices(
                 uint32_t length = 0;
                 uint32_t timeStep = static_cast<uint32_t>(currentTimeStep);
 
+                std::cout << "rank: " << r << ", currentTimeStep: " << currentTimeStep << std::endl;
+                
                 while (timeStep == currentTimeStep)
                 {
                     size_t localPosition = position;
                     lf_GetCharacteristics(buffer, localPosition,
                                           header.DataType, count, length,
                                           timeStep);
+
+                    std::cout << "rank: " << r << ", timeStep: " << timeStep<< std::endl;
 
                     if (timeStep != currentTimeStep)
                     {
@@ -1309,11 +1317,14 @@ void BP3Serializer::MergeSerializeIndices(
 
                     ++setsCount;
 
+                    std::cout << "setsCount: " << setsCount << ", positionOut: " << positionOut << ", position: " << position<< std::endl;   
                     CopyToBuffer(bufferOut, positionOut, &buffer[position],
                                  length + 5);
 
                     position += length + 5;
 
+                    std::cout << "length: " << length << ", position: " << position << ", positions[r]: " << positions[r] << std::endl; 
+                    
                     if (position >= buffer.size())
                     {
                         break;
@@ -1475,6 +1486,7 @@ void BP3Serializer::MergeSerializeIndices(
     {
         for (const auto &rankIndices : nameRankIndices)
         {
+            std::cout << rankIndices.first << std::endl;
             lf_MergeRankSerial(rankIndices.second, bufferSTL);
         }
         return;

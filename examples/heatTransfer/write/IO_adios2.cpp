@@ -11,6 +11,7 @@
 #include "IO.h"
 
 #include <string>
+#include <iostream>
 
 #include <adios2.h>
 
