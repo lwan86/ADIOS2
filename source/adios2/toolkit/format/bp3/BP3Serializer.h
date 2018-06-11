@@ -104,6 +104,7 @@ public:
                      const bool addMetadata = true);
 
     void ResetIndices();
+    void ResetIndicesBuffer();
 
     /**
      * Get a string with profiling information for this rank
@@ -389,6 +390,16 @@ private:
      * @param nameRankIndices
      */
     void MergeSerializeIndices(
+        const std::unordered_map<std::string, std::vector<SerialElementIndex>>
+            &nameRankIndices,
+        MPI_Comm comm, BufferSTL &bufferSTL);
+
+    /**
+     * Only merge indices of each time step and write to m_HeapBuffer.m_Metadata,
+     * clear indices of current time step at the end of each step
+     * @param nameRankIndices
+     */
+    void MergeSerializeIndicesEachStep(
         const std::unordered_map<std::string, std::vector<SerialElementIndex>>
             &nameRankIndices,
         MPI_Comm comm, BufferSTL &bufferSTL);

@@ -265,6 +265,8 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
             m_FileMetadataManager.m_Transports.clear();
         }
     }
+    //m_BP3Serializer.ResetIndices();  // reset the local indices at every step
+    m_BP3Serializer.ResetIndicesBuffer();
 }
 
 void BPFileWriter::WriteData(const bool isFinal, const int transportIndex)

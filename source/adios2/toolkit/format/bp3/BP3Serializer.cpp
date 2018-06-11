@@ -202,6 +202,29 @@ void BP3Serializer::ResetIndices()
     m_MetadataSet.VarsIndices.clear();
 }
 
+void BP3Serializer::ResetIndicesBuffer() 
+{
+    
+    for( auto it = m_MetadataSet.AttributesIndices.begin(); it != m_MetadataSet.AttributesIndices.end(); ++it)
+    {
+        //std::cout << "AttributesIndices, variable name: " << it->first << "count: " << it->second.Count << std::endl;
+        //it->second.Buffer.clear();
+        size_t setsCountPosition = 15 + sizeof(it->second.Count) + it->first.size();
+        it->second.Buffer.erase(it->second.Buffer.begin()+setsCountPosition, it->second.Buffer.end());
+        it->second.Count = 0;
+    }
+    
+    for( auto it = m_MetadataSet.VarsIndices.begin(); it != m_MetadataSet.VarsIndices.end(); ++it)
+    {
+        //std::cout << "VarsIndices, variable name: " << it->first << "count: " << it->second.Count << std::endl;
+        //it->second.Buffer.clear();
+        //std::cout << it->second.Count << ", "<< sizeof(it->second.Count) << std::endl;
+        size_t setsCountPosition = 15 + sizeof(it->second.Count) + it->first.size();
+        it->second.Buffer.erase(it->second.Buffer.begin()+setsCountPosition, it->second.Buffer.end());
+        it->second.Count = 0;
+    }
+}
+
 std::string BP3Serializer::GetRankProfilingJSON(
     const std::vector<std::string> &transportsTypes,
     const std::vector<profiling::IOChrono *> &transportsProfilers) noexcept
@@ -899,7 +922,8 @@ void BP3Serializer::AggregateMergeIndex(
             static_cast<uint32_t>(nameRankIndices.size());
         CopyToBuffer(buffer, countPosition, &totalCountU32);
 
-        MergeSerializeIndices(nameRankIndices, comm, bufferSTL);
+        //MergeSerializeIndices(nameRankIndices, comm, bufferSTL);
+        MergeSerializeIndicesEachStep(nameRankIndices, comm, bufferSTL);
 
         // Write length
         const uint64_t totalLengthU64 =
@@ -907,7 +931,7 @@ void BP3Serializer::AggregateMergeIndex(
         CopyToBuffer(buffer, countPosition, &totalLengthU64);
     }
 }
-
+ 
 std::vector<char> BP3Serializer::SerializeIndices(
     const std::unordered_map<std::string, SerialElementIndex> &indices,
     MPI_Comm comm) const noexcept
@@ -1528,6 +1552,278 @@ void BP3Serializer::MergeSerializeIndices(
     {
         thread.join();
     }
+}
+
+/****/
+void BP3Serializer::MergeSerializeIndicesEachStep(
+    const std::unordered_map<std::string, std::vector<SerialElementIndex>>
+        &nameRankIndices,
+    MPI_Comm comm, BufferSTL &bufferSTL)
+{
+    auto lf_GetCharacteristics = [&](const std::vector<char> &buffer,
+                                     size_t &position, const uint8_t dataType,
+                                     uint8_t &count, uint32_t &length,
+                                     uint32_t &timeStep)
+
+    {
+        const DataTypes dataTypeEnum = static_cast<DataTypes>(dataType);
+
+        switch (dataTypeEnum)
+        {
+
+        case (type_string):
+        {
+            const auto characteristics =
+                ReadElementIndexCharacteristics<std::string>(buffer, position,
+                                                             type_string, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_string_array):
+        {
+            const auto characteristics =
+                ReadElementIndexCharacteristics<std::string>(
+                    buffer, position, type_string_array, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_byte):
+        {
+            const auto characteristics = ReadElementIndexCharacteristics<char>(
+                buffer, position, type_byte, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_short):
+        {
+            const auto characteristics = ReadElementIndexCharacteristics<short>(
+                buffer, position, type_short, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_integer):
+        {
+            const auto characteristics = ReadElementIndexCharacteristics<int>(
+                buffer, position, type_integer, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_long):
+        {
+            const auto characteristics =
+                ReadElementIndexCharacteristics<int64_t>(buffer, position,
+                                                         type_long, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_unsigned_byte):
+        {
+            const auto characteristics =
+                ReadElementIndexCharacteristics<unsigned char>(
+                    buffer, position, type_unsigned_byte, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_unsigned_short):
+        {
+            const auto characteristics =
+                ReadElementIndexCharacteristics<unsigned short>(
+                    buffer, position, type_unsigned_short, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_unsigned_integer):
+        {
+            const auto characteristics =
+                ReadElementIndexCharacteristics<unsigned int>(
+                    buffer, position, type_unsigned_integer, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_unsigned_long):
+        {
+            auto characteristics = ReadElementIndexCharacteristics<uint64_t>(
+                buffer, position, type_unsigned_long, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_real):
+        {
+            auto characteristics = ReadElementIndexCharacteristics<float>(
+                buffer, position, type_real, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        case (type_double):
+        {
+            auto characteristics = ReadElementIndexCharacteristics<double>(
+                buffer, position, type_double, true);
+            count = characteristics.EntryCount;
+            length = characteristics.EntryLength;
+            timeStep = characteristics.Statistics.Step;
+            break;
+        }
+
+        default:
+            // TODO: complex, long double
+            throw std::invalid_argument(
+                "ERROR: type " + std::to_string(dataType) +
+                " not supported in BP3 Metadata Merge\n");
+
+        } // end switch
+
+    };
+
+    auto lf_MergeRankSerial = [&](
+        const std::vector<SerialElementIndex> &indices, BufferSTL &bufferSTL) {
+
+        auto &bufferOut = bufferSTL.m_Buffer;
+        auto &positionOut = bufferSTL.m_Position;
+
+        // extract header
+        ElementIndexHeader header;
+        // index non-empty buffer
+        size_t firstRank = 0;
+        // index positions per rank
+        std::vector<size_t> positions(indices.size(), 0);
+        // merge index length
+        size_t headerSize = 0;
+
+        for (size_t r = 0; r < indices.size(); ++r)
+        {
+            const auto &buffer = indices[r].Buffer;
+            if (buffer.empty())
+            {
+                continue;
+            }
+            size_t &position = positions[r];
+
+            header = ReadElementIndexHeader(buffer, position);
+            firstRank = r;
+
+            headerSize = position;
+            std::cout << "headerSize: " << headerSize << std::endl;
+            break;
+        }
+
+        if (m_DebugMode)
+        {
+            if (header.DataType == std::numeric_limits<uint8_t>::max() - 1)
+            {
+                throw std::runtime_error(
+                    "ERROR: invalid data type for variable " + header.Name +
+                    "when writing metadata index\n");
+            }
+        }
+
+        // move all positions to headerSize
+        for (size_t r = 0; r < indices.size(); ++r)
+        {
+            const auto &buffer = indices[r].Buffer;
+            if (buffer.empty())
+            {
+                continue;
+            }
+            positions[r] = headerSize;
+            std::cout << "rank: " << r << ", positions[r]: " << positions[r] << std::endl;
+        }
+
+        uint64_t setsCount = 0;
+        unsigned int currentTimeStep = 1;
+
+        const size_t entryLengthPosition = positionOut;
+        positionOut += headerSize;
+
+        for (size_t r = firstRank; r < indices.size(); ++r) 
+        {
+            const auto &buffer = indices[r].Buffer;
+            if (buffer.empty())
+            {
+                continue;
+            }
+            auto &position = positions[r];
+            std::cout << "rank: " << r << ", positions[r]: " << positions[r] << ", position: " << position << ", buffer.size(): " << buffer.size() << std::endl;
+            if (position >= buffer.size()) 
+            {
+                continue;
+            }
+
+            uint8_t count = 0;
+            uint32_t length = 0;
+            uint32_t timeStep = static_cast<uint32_t>(currentTimeStep);
+            size_t localPosition = position;
+            lf_GetCharacteristics(buffer, localPosition,
+                                    header.DataType, count, length,
+                                    timeStep);
+            std::cout << "rank: " << r << ", timeStep: " << timeStep<< std::endl;
+            ++setsCount;
+
+            std::cout << "setsCount: " << setsCount << ", positionOut: " << positionOut << ", position: " << position<< std::endl;   
+            CopyToBuffer(bufferOut, positionOut, &buffer[position],
+                            length + 5);
+
+            position += length + 5;
+            std::cout << "length: " << length << ", position: " << position << ", positions[r]: " << positions[r] << std::endl; 
+        }
+        
+        const uint32_t entryLength =
+        static_cast<uint32_t>(positionOut - entryLengthPosition - 4);
+
+        size_t backPosition = entryLengthPosition;
+        CopyToBuffer(bufferOut, backPosition, &entryLength);
+        CopyToBuffer(bufferOut, backPosition, &indices[firstRank].Buffer[4],
+                     headerSize - 8 - 4);
+        CopyToBuffer(bufferOut, backPosition, &setsCount);
+ 
+    };
+
+
+
+    // BODY OF FUNCTION STARTS HERE
+    if (m_Threads == 1) // enforcing serial version for now
+    {
+        for (const auto &rankIndices : nameRankIndices)
+        {
+            std::cout << rankIndices.first << std::endl;
+            lf_MergeRankSerial(rankIndices.second, bufferSTL);
+        }
+        return;
+    }
+
+
 }
 
 std::vector<char>
