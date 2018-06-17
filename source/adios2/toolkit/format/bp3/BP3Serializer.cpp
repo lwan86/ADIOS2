@@ -204,7 +204,7 @@ void BP3Serializer::ResetIndices()
 
 void BP3Serializer::ResetIndicesBuffer() 
 {
-    
+    /*
     for( auto it = m_MetadataSet.AttributesIndices.begin(); it != m_MetadataSet.AttributesIndices.end(); ++it)
     {
         //std::cout << "AttributesIndices, variable name: " << it->first << "count: " << it->second.Count << std::endl;
@@ -213,16 +213,31 @@ void BP3Serializer::ResetIndicesBuffer()
         it->second.Buffer.erase(it->second.Buffer.begin()+setsCountPosition, it->second.Buffer.end());
         it->second.Count = 0;
     }
+    */
+
+    m_MetadataSet.PGIndex.Buffer.resize(0);
+    m_MetadataSet.DataPGCount = 0;
+    m_MetadataSet.DataPGLengthPosition = 0;
+    m_MetadataSet.DataPGVarsCount = 0;
+    m_MetadataSet.DataPGVarsCountPosition = 0;
     
-    for( auto it = m_MetadataSet.VarsIndices.begin(); it != m_MetadataSet.VarsIndices.end(); ++it)
+    for( auto& variableIndexPair : m_MetadataSet.VarsIndices)
     {
-        //std::cout << "VarsIndices, variable name: " << it->first << "count: " << it->second.Count << std::endl;
-        //it->second.Buffer.clear();
-        //std::cout << it->second.Count << ", "<< sizeof(it->second.Count) << std::endl;
-        size_t setsCountPosition = 15 + sizeof(it->second.Count) + it->first.size();
-        it->second.Buffer.erase(it->second.Buffer.begin()+setsCountPosition, it->second.Buffer.end());
-        it->second.Count = 0;
-    }
+        const std::string &variableName = variableIndexPair.first;
+        SerialElementIndex &index = variableIndexPair.second;
+        const size_t headersize = 15 + 8 + variableName.size();
+        index.Buffer.resize(headersize);
+        index.Count = 0;
+    } 
+
+    for( auto& attributesIndexPair : m_MetadataSet.AttributesIndices)
+    {
+        const std::string &attributesName = attributesIndexPair.first;
+        SerialElementIndex &index = attributesIndexPair.second;
+        const size_t headersize = 15 + 8 + attributesName.size();
+        index.Buffer.resize(headersize);
+        index.Count = 0;
+    } 
 }
 
 std::string BP3Serializer::GetRankProfilingJSON(

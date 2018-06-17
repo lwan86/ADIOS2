@@ -180,20 +180,28 @@ void BPFileWriter::DoClose(const int transportIndex)
     if (m_BP3Serializer.m_DeferredVariables.size() > 0)
     {
         PerformPuts();
+
+        DoFlush(true, transportIndex);
+        
+        if (m_BP3Serializer.m_CollectiveMetadata &&
+            m_FileDataManager.AllTransportsClosed())
+        {
+            WriteCollectiveMetadataFile(true);
+        }
     }
 
-    DoFlush(true, transportIndex);
+    //DoFlush(true, transportIndex);
 
     if (m_BP3Serializer.m_Aggregator.m_IsConsumer)
     {
         m_FileDataManager.CloseFiles(transportIndex);
     }
 
-    if (m_BP3Serializer.m_CollectiveMetadata &&
-        m_FileDataManager.AllTransportsClosed())
-    {
-        WriteCollectiveMetadataFile(true);
-    }
+    //if (m_BP3Serializer.m_CollectiveMetadata &&
+    //    m_FileDataManager.AllTransportsClosed())
+    //{
+    //    WriteCollectiveMetadataFile(true);
+    //}
 
     if (m_BP3Serializer.m_Profiler.IsActive &&
         m_FileDataManager.AllTransportsClosed())
@@ -240,6 +248,7 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
     m_BP3Serializer.AggregateCollectiveMetadata(
         m_MPIComm, m_BP3Serializer.m_Metadata, true);
 
+    static size_t MDLength=0; // length of metadata file to which we append
     if (m_BP3Serializer.m_RankMPI == 0)
     {
         // first init metadata files
@@ -250,14 +259,30 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
         const std::vector<std::string> bpMetadataFileNames =
             m_BP3Serializer.GetBPMetadataFileNames(transportsNames);
 
-        m_FileMetadataManager.OpenFiles(bpMetadataFileNames, m_OpenMode,
+        //m_FileMetadataManager.OpenFiles(bpMetadataFileNames, m_OpenMode,
+        //                                m_IO.m_TransportsParameters,
+        //                                m_BP3Serializer.m_Profiler.IsActive);
+
+        m_FileMetadataManager.OpenFiles(bpMetadataFileNames, adios2::Mode::Append,
                                         m_IO.m_TransportsParameters,
                                         m_BP3Serializer.m_Profiler.IsActive);
+
+        void * minifooter = (m_BP3Serializer.m_Metadata.m_Buffer.data() + 
+                            m_BP3Serializer.m_Metadata.m_Position - 28);
+        size_t * pgptr = static_cast<size_t*>(minifooter);
+        size_t * varptr = pgptr+1;
+        size_t * attrptr = varptr+1;
+        *pgptr = *pgptr + MDLength;
+        *varptr = *varptr + MDLength;
+        *attrptr = *attrptr + MDLength;
+        size_t endptrValue = MDLength + m_BP3Serializer.m_Metadata.m_Position - 56;
 
         m_FileMetadataManager.WriteFiles(
             m_BP3Serializer.m_Metadata.m_Buffer.data(),
             m_BP3Serializer.m_Metadata.m_Position);
         m_FileMetadataManager.CloseFiles();
+
+        MDLength += m_BP3Serializer.m_Metadata.m_Position;
 
         if (!isFinal)
         {
@@ -265,8 +290,11 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
             m_FileMetadataManager.m_Transports.clear();
         }
     }
-    //m_BP3Serializer.ResetIndices();  // reset the local indices at every step
+    // reset the local indices at every step
+    
+    m_BP3Serializer.ResetBuffer(m_BP3Serializer.m_Metadata, true);
     m_BP3Serializer.ResetIndicesBuffer();
+    
 }
 
 void BPFileWriter::WriteData(const bool isFinal, const int transportIndex)
