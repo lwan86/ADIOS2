@@ -17,6 +17,8 @@
 #include "adios2/helper/adiosFunctions.h" //CheckIndexRange
 #include "adios2/toolkit/transport/file/FileFStream.h"
 
+#include <iostream>
+
 namespace adios2
 {
 
@@ -25,7 +27,8 @@ BPFileWriter::BPFileWriter(IO &io, const std::string &name, const Mode mode,
 : Engine("BPFileWriter", io, name, mode, mpiComm),
   m_BP3Serializer(mpiComm, m_DebugMode),
   m_FileDataManager(mpiComm, m_DebugMode),
-  m_FileMetadataManager(mpiComm, m_DebugMode)
+  m_FileMetadataManager(mpiComm, m_DebugMode),
+  m_FileMetadataIndexManager(mpiComm, m_DebugMode)
 {
     m_EndMessage = " in call to IO Open BPFileWriter " + m_Name + "\n";
     Init();
@@ -243,12 +246,70 @@ void BPFileWriter::WriteProfilingJSONFile()
     }
 }
 
+
+void BPFileWriter::PopulateMetadataIndexFileHeader(std::vector<char> &buffer, 
+        size_t &position, const uint8_t version, const bool addSubfiles)
+{
+    auto lf_CopyVersionChar = [](const std::string version,
+                                 std::vector<char> &buffer, size_t &position) {
+        CopyToBuffer(buffer, position, version.c_str());
+    };
+
+    const std::string majorVersion(std::to_string(ADIOS2_VERSION_MAJOR));
+    const std::string minorVersion(std::to_string(ADIOS2_VERSION_MINOR));
+    const std::string patchVersion(std::to_string(ADIOS2_VERSION_PATCH));
+
+    const std::string versionLongTag("ADIOS-BP v" + majorVersion + "." +
+                                     minorVersion + "." + patchVersion);
+    const size_t versionLongTagSize = versionLongTag.size();
+    if (versionLongTagSize < 24)
+    {
+        CopyToBuffer(buffer, position, versionLongTag.c_str(),
+                     versionLongTagSize);
+        position += 24 - versionLongTagSize;
+    }
+    else
+    {
+        CopyToBuffer(buffer, position, versionLongTag.c_str(), 24);
+    }
+
+    lf_CopyVersionChar(majorVersion, buffer, position);
+    lf_CopyVersionChar(minorVersion, buffer, position);
+    lf_CopyVersionChar(patchVersion, buffer, position);
+    ++position;
+
+    const uint8_t endianness = IsLittleEndian() ? 0 : 1;
+    CopyToBuffer(buffer, position, &endianness);
+
+    if (addSubfiles)
+    {
+        position += 1;
+        CopyToBuffer(buffer, position, &version);
+    }
+    else
+    {
+        position += 2;
+    }
+    CopyToBuffer(buffer, position, &version);
+}
+
+void BPFileWriter::PopulateMetadataIndexFileContent(const uint64_t currentStep, 
+    const uint64_t pgIndexStart, const uint64_t variablesIndexStart,
+    const uint64_t attributesIndexStart, std::vector<char> &buffer, 
+    size_t &position)
+{
+    CopyToBuffer(buffer, position, &currentStep);
+    CopyToBuffer(buffer, position, &pgIndexStart);
+    CopyToBuffer(buffer, position, &variablesIndexStart);
+    CopyToBuffer(buffer, position, &attributesIndexStart);
+}
+
 void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
 {
     m_BP3Serializer.AggregateCollectiveMetadata(
         m_MPIComm, m_BP3Serializer.m_Metadata, true);
 
-    static size_t MDLength=0; // length of metadata file to which we append
+    //static size_t MDLength=0; // length of metadata file to which we append
     if (m_BP3Serializer.m_RankMPI == 0)
     {
         // first init metadata files
@@ -267,27 +328,76 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
                                         m_IO.m_TransportsParameters,
                                         m_BP3Serializer.m_Profiler.IsActive);
 
-        void * minifooter = (m_BP3Serializer.m_Metadata.m_Buffer.data() + 
-                            m_BP3Serializer.m_Metadata.m_Position - 28);
-        size_t * pgptr = static_cast<size_t*>(minifooter);
-        size_t * varptr = pgptr+1;
-        size_t * attrptr = varptr+1;
-        *pgptr = *pgptr + MDLength;
-        *varptr = *varptr + MDLength;
-        *attrptr = *attrptr + MDLength;
-        size_t endptrValue = MDLength + m_BP3Serializer.m_Metadata.m_Position - 56;
-
+        
         m_FileMetadataManager.WriteFiles(
             m_BP3Serializer.m_Metadata.m_Buffer.data(),
             m_BP3Serializer.m_Metadata.m_Position);
         m_FileMetadataManager.CloseFiles();
 
-        MDLength += m_BP3Serializer.m_Metadata.m_Position;
+        //void * minifooter = (m_BP3Serializer.m_Metadata.m_Buffer.data() + 
+        //                    m_BP3Serializer.m_Metadata.m_Position - 28);
+        //size_t * pgptr = static_cast<size_t*>(minifooter);
+        //size_t * varptr = pgptr+1;
+        //size_t * attrptr = varptr+1;
+        //*pgptr = *pgptr + MDLength;
+        //*varptr = *varptr + MDLength;
+        //*attrptr = *attrptr + MDLength;
+        //size_t endptrValue = MDLength + m_BP3Serializer.m_Metadata.m_Position - 56;
+
+        const uint64_t pgIndexStartMetadataFile = m_BP3Serializer.m_MetadataSet.pgIndexStart + m_BP3Serializer.m_MetadataSet.metadataFileLength;
+        const uint64_t varIndexStartMetadataFile = m_BP3Serializer.m_MetadataSet.varIndexStart + m_BP3Serializer.m_MetadataSet.metadataFileLength;
+        const uint64_t attrIndexStartMetadataFile = m_BP3Serializer.m_MetadataSet.attrIndexStart + m_BP3Serializer.m_MetadataSet.metadataFileLength;
+        size_t endptrValue = m_BP3Serializer.m_MetadataSet.metadataFileLength + m_BP3Serializer.m_Metadata.m_Position;
+
+        std::cout << "current step: " << m_BP3Serializer.m_MetadataSet.CurrentStep << std::endl;
+        std::cout << "pgindex start in metadata file: " << pgIndexStartMetadataFile << std::endl;
+        std::cout << "varindex start in metadata file: " << varIndexStartMetadataFile << std::endl;
+        std::cout << "attrindex start in metadata file: " << attrIndexStartMetadataFile << std::endl;
+        std::cout << "endptr value in metadata file: " << endptrValue << std::endl;
+
+        BufferSTL metadataindex;
+        metadataindex.m_Buffer.resize(32);
+        metadataindex.m_Buffer.assign(metadataindex.m_Buffer.size(), '\0');
+        metadataindex.m_Position = 0;
+
+        std::vector<std::string> metadataIndexFileNames;
+        metadataIndexFileNames.push_back("metadata.index");
+        m_FileMetadataIndexManager.OpenFiles(metadataIndexFileNames, adios2::Mode::Append,
+                                        m_IO.m_TransportsParameters,
+                                        m_BP3Serializer.m_Profiler.IsActive);
+        metadataIndexFileNames.pop_back();
+
+        if (m_BP3Serializer.m_MetadataSet.CurrentStep == 1)
+        {
+            PopulateMetadataIndexFileHeader(metadataindex.m_Buffer, metadataindex.m_Position, 3, true);
+            m_FileMetadataIndexManager.WriteFiles(
+                metadataindex.m_Buffer.data(),
+                metadataindex.m_Position);
+            
+            metadataindex.m_Buffer.resize(32);
+            metadataindex.m_Buffer.assign(metadataindex.m_Buffer.size(), '\0');
+            metadataindex.m_Position = 0;
+        }
+
+        PopulateMetadataIndexFileContent(m_BP3Serializer.m_MetadataSet.CurrentStep,
+            pgIndexStartMetadataFile, varIndexStartMetadataFile, attrIndexStartMetadataFile, 
+            metadataindex.m_Buffer, metadataindex.m_Position);
+    
+        m_FileMetadataIndexManager.WriteFiles(
+            metadataindex.m_Buffer.data(),
+            metadataindex.m_Position);
+        m_FileMetadataIndexManager.CloseFiles();
+
+
+
+        //MDLength += m_BP3Serializer.m_Metadata.m_Position;
+        m_BP3Serializer.m_MetadataSet.metadataFileLength += m_BP3Serializer.m_Metadata.m_Position;
 
         if (!isFinal)
         {
             m_BP3Serializer.ResetBuffer(m_BP3Serializer.m_Metadata, true);
             m_FileMetadataManager.m_Transports.clear();
+            m_FileMetadataIndexManager.m_Transports.clear();
         }
     }
     // reset the local indices at every step

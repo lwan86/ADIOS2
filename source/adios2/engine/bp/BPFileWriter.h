@@ -50,6 +50,8 @@ private:
     /** Manages the optional collective metadata files */
     transportman::TransportMan m_FileMetadataManager;
 
+    transportman::TransportMan m_FileMetadataIndexManager;
+
     void Init() final;
 
     /** Parses parameters from IO SetParameters */
@@ -84,6 +86,14 @@ private:
     /** Write a profiling.json file from m_BP1Writer and m_TransportsManager
      * profilers*/
     void WriteProfilingJSONFile();
+
+    void PopulateMetadataIndexFileHeader(std::vector<char> &buffer, 
+        size_t &position, const uint8_t, const bool addSubfiles);
+
+    void PopulateMetadataIndexFileContent(const uint64_t currentStep, 
+        const uint64_t pgIndexStart, const uint64_t variablesIndexStart,
+        const uint64_t attributesIndexStart, std::vector<char> &buffer, 
+        size_t &position);
 
     void WriteCollectiveMetadataFile(const bool isFinal = false);
 

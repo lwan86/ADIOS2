@@ -109,6 +109,18 @@ public:
         /** Similar to TimeStep, but uses uint64_t and start from zero. Used for
          * streaming a large number of steps */
         size_t CurrentStep = 0;
+
+        /* position of pg index in current buffer*/
+        size_t pgIndexStart;
+
+        /* position of var index in current buffer*/
+        size_t varIndexStart;
+
+        /* position of attr index in current buffer*/
+        size_t attrIndexStart;
+
+        /* length of metadata file to which we append*/
+        size_t metadataFileLength;
     };
 
     struct Minifooter

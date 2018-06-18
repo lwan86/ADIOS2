@@ -314,16 +314,22 @@ void BP3Serializer::AggregateCollectiveMetadata(MPI_Comm comm,
 
     auto &position = bufferSTL.m_Position;
 
-    const uint64_t pgIndexStart =
+    //const uint64_t pgIndexStart =
+    //    inMetadataBuffer ? position : position + bufferSTL.m_AbsolutePosition;
+    m_MetadataSet.pgIndexStart =
         inMetadataBuffer ? position : position + bufferSTL.m_AbsolutePosition;
     AggregateIndex(m_MetadataSet.PGIndex, m_MetadataSet.DataPGCount, comm,
                    bufferSTL);
 
-    const uint64_t variablesIndexStart =
+    //const uint64_t variablesIndexStart =
+    //    inMetadataBuffer ? position : position + bufferSTL.m_AbsolutePosition;
+    m_MetadataSet.varIndexStart =
         inMetadataBuffer ? position : position + bufferSTL.m_AbsolutePosition;
     AggregateMergeIndex(m_MetadataSet.VarsIndices, comm, bufferSTL);
 
-    const uint64_t attributesIndexStart =
+    //const uint64_t attributesIndexStart =
+    //    inMetadataBuffer ? position : position + bufferSTL.m_AbsolutePosition;
+    m_MetadataSet.attrIndexStart =
         inMetadataBuffer ? position : position + bufferSTL.m_AbsolutePosition;
     AggregateMergeIndex(m_MetadataSet.AttributesIndices, comm, bufferSTL);
 
@@ -331,9 +337,9 @@ void BP3Serializer::AggregateCollectiveMetadata(MPI_Comm comm,
     MPI_Comm_rank(comm, &rank);
     if (rank == 0)
     {
-        PutMinifooter(pgIndexStart, variablesIndexStart, attributesIndexStart,
-                      bufferSTL.m_Buffer, bufferSTL.m_Position,
-                      inMetadataBuffer);
+        //PutMinifooter(pgIndexStart, variablesIndexStart, attributesIndexStart,
+        //              bufferSTL.m_Buffer, bufferSTL.m_Position,
+        //              inMetadataBuffer);
 
         if (inMetadataBuffer)
         {
