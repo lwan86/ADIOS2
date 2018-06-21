@@ -55,6 +55,7 @@ private:
     format::BP3Deserializer m_BP3Deserializer;
     transportman::TransportMan m_FileManager;
     transportman::TransportMan m_SubFileManager;
+    transportman::TransportMan m_FileMetadataIndexManager;
 
     /** used for per-step reads, TODO: to be moved to BP3Deserializer */
     size_t m_CurrentStep = 0;

@@ -20,7 +20,7 @@ BPFileReader::BPFileReader(IO &io, const std::string &name, const Mode mode,
                            MPI_Comm mpiComm)
 : Engine("BPFileReader", io, name, mode, mpiComm),
   m_BP3Deserializer(mpiComm, m_DebugMode), m_FileManager(mpiComm, m_DebugMode),
-  m_SubFileManager(mpiComm, m_DebugMode)
+  m_SubFileManager(mpiComm, m_DebugMode), m_FileMetadataIndexManager(mpiComm, m_DebugMode)
 {
     Init();
 }
@@ -139,6 +139,11 @@ void BPFileReader::InitTransports()
         const bool profile = m_BP3Deserializer.m_Profiler.IsActive;
         m_FileManager.OpenFiles({metadataFile}, adios2::Mode::Read,
                                 m_IO.m_TransportsParameters, profile);
+
+        const std::string metadataIndexFile("metadata.index");
+        m_FileMetadataIndexManager.OpenFiles({metadataIndexFile}, adios2::Mode::Read,
+                                m_IO.m_TransportsParameters, profile);
+
     }
 }
 
@@ -154,9 +159,19 @@ void BPFileReader::InitBuffer()
 
         m_FileManager.ReadFile(m_BP3Deserializer.m_Metadata.m_Buffer.data(),
                                fileSize);
+
+        const size_t metadataIndexFileSize = m_FileMetadataIndexManager.GetFileSize(0);
+        m_BP3Deserializer.m_MetadataIndex.Resize(
+            metadataIndexFileSize,
+            "allocating metadata index buffer, in call to BPFileReader Open");
+        m_FileMetadataIndexManager.ReadFile(m_BP3Deserializer.m_MetadataIndex.m_Buffer.data(),
+                               metadataIndexFileSize);
+
     }
     // broadcast buffer to all ranks from zero
     BroadcastVector(m_BP3Deserializer.m_Metadata.m_Buffer, m_MPIComm);
+
+    BroadcastVector(m_BP3Deserializer.m_MetadataIndex.m_Buffer, m_MPIComm);
 
     // fills IO with Variables and Attributes
     m_BP3Deserializer.ParseMetadata(m_BP3Deserializer.m_Metadata, m_IO);
@@ -237,6 +252,7 @@ void BPFileReader::DoClose(const int transportIndex)
 
     m_SubFileManager.CloseFiles();
     m_FileManager.CloseFiles();
+    m_FileMetadataIndexManager.CloseFiles();
 }
 
 } // end namespace adios2

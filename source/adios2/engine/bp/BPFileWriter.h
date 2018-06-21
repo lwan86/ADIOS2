@@ -90,9 +90,9 @@ private:
     void PopulateMetadataIndexFileHeader(std::vector<char> &buffer, 
         size_t &position, const uint8_t, const bool addSubfiles);
 
-    void PopulateMetadataIndexFileContent(const uint64_t currentStep, 
+    void PopulateMetadataIndexFileContent(const uint64_t currentStep, const uint64_t mpirank,
         const uint64_t pgIndexStart, const uint64_t variablesIndexStart,
-        const uint64_t attributesIndexStart, std::vector<char> &buffer, 
+        const uint64_t attributesIndexStart, const uint64_t endptrval, std::vector<char> &buffer, 
         size_t &position);
 
     void WriteCollectiveMetadataFile(const bool isFinal = false);

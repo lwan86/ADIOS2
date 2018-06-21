@@ -41,6 +41,12 @@ void BP3Deserializer::ParseMetadata(const BufferSTL &bufferSTL, IO &io)
     ParseAttributesIndex(bufferSTL, io);
 }
 
+
+void BP3Deserializer::ParseMetadataIndex(const BufferSTL &bufferSTL)
+{
+    
+}
+
 void BP3Deserializer::ClipContiguousMemory(
     const std::string &variableName, IO &io,
     const std::vector<char> &contiguousMemory, const Box<Dims> &blockBox,
@@ -134,6 +140,7 @@ void BP3Deserializer::ParseMinifooter(const BufferSTL &bufferSTL)
     m_Minifooter.VarsIndexStart = ReadValue<uint64_t>(buffer, position);
     m_Minifooter.AttributesIndexStart = ReadValue<uint64_t>(buffer, position);
 }
+
 
 void BP3Deserializer::ParsePGIndex(const BufferSTL &bufferSTL, const IO &io)
 {

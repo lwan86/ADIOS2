@@ -32,6 +32,8 @@ public:
 
     bool m_PerformedGets = true;
 
+    BufferSTL m_MetadataIndex;
+
     /**
      * Unique constructor
      * @param mpiComm
@@ -42,6 +44,8 @@ public:
     ~BP3Deserializer() = default;
 
     void ParseMetadata(const BufferSTL &bufferSTL, IO &io);
+
+    void ParseMetadataIndex(const BufferSTL &bufferSTL);
 
     // Sync functions
     template <class T>
@@ -88,6 +92,7 @@ private:
     static std::mutex m_Mutex;
 
     void ParseMinifooter(const BufferSTL &bufferSTL);
+
     void ParsePGIndex(const BufferSTL &bufferSTL, const IO &io);
     void ParseVariablesIndex(const BufferSTL &bufferSTL, IO &io);
     void ParseAttributesIndex(const BufferSTL &bufferSTL, IO &io);

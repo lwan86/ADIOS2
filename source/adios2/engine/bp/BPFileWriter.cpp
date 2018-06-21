@@ -291,17 +291,20 @@ void BPFileWriter::PopulateMetadataIndexFileHeader(std::vector<char> &buffer,
         position += 2;
     }
     CopyToBuffer(buffer, position, &version);
+    position += 16;
 }
 
 void BPFileWriter::PopulateMetadataIndexFileContent(const uint64_t currentStep, 
-    const uint64_t pgIndexStart, const uint64_t variablesIndexStart,
-    const uint64_t attributesIndexStart, std::vector<char> &buffer, 
+    const uint64_t mpirank, const uint64_t pgIndexStart, const uint64_t variablesIndexStart,
+    const uint64_t attributesIndexStart, const uint64_t endptrval, std::vector<char> &buffer, 
     size_t &position)
 {
     CopyToBuffer(buffer, position, &currentStep);
+    CopyToBuffer(buffer, position, &mpirank);
     CopyToBuffer(buffer, position, &pgIndexStart);
     CopyToBuffer(buffer, position, &variablesIndexStart);
     CopyToBuffer(buffer, position, &attributesIndexStart);
+    CopyToBuffer(buffer, position, &endptrval);
 }
 
 void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
@@ -349,14 +352,14 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
         const uint64_t attrIndexStartMetadataFile = m_BP3Serializer.m_MetadataSet.attrIndexStart + m_BP3Serializer.m_MetadataSet.metadataFileLength;
         size_t endptrValue = m_BP3Serializer.m_MetadataSet.metadataFileLength + m_BP3Serializer.m_Metadata.m_Position;
 
-        std::cout << "current step: " << m_BP3Serializer.m_MetadataSet.CurrentStep << std::endl;
-        std::cout << "pgindex start in metadata file: " << pgIndexStartMetadataFile << std::endl;
-        std::cout << "varindex start in metadata file: " << varIndexStartMetadataFile << std::endl;
-        std::cout << "attrindex start in metadata file: " << attrIndexStartMetadataFile << std::endl;
-        std::cout << "endptr value in metadata file: " << endptrValue << std::endl;
+        //std::cout << "current step: " << m_BP3Serializer.m_MetadataSet.CurrentStep << std::endl;
+        //std::cout << "pgindex start in metadata file: " << pgIndexStartMetadataFile << std::endl;
+        //std::cout << "varindex start in metadata file: " << varIndexStartMetadataFile << std::endl;
+        //std::cout << "attrindex start in metadata file: " << attrIndexStartMetadataFile << std::endl;
+        //std::cout << "endptr value in metadata file: " << endptrValue << std::endl;
 
         BufferSTL metadataindex;
-        metadataindex.m_Buffer.resize(32);
+        metadataindex.m_Buffer.resize(48);
         metadataindex.m_Buffer.assign(metadataindex.m_Buffer.size(), '\0');
         metadataindex.m_Position = 0;
 
@@ -374,13 +377,13 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
                 metadataindex.m_Buffer.data(),
                 metadataindex.m_Position);
             
-            metadataindex.m_Buffer.resize(32);
+            metadataindex.m_Buffer.resize(48);
             metadataindex.m_Buffer.assign(metadataindex.m_Buffer.size(), '\0');
             metadataindex.m_Position = 0;
         }
 
-        PopulateMetadataIndexFileContent(m_BP3Serializer.m_MetadataSet.CurrentStep,
-            pgIndexStartMetadataFile, varIndexStartMetadataFile, attrIndexStartMetadataFile, 
+        PopulateMetadataIndexFileContent(m_BP3Serializer.m_MetadataSet.CurrentStep, m_BP3Serializer.m_RankMPI,
+            pgIndexStartMetadataFile, varIndexStartMetadataFile, attrIndexStartMetadataFile, endptrValue, 
             metadataindex.m_Buffer, metadataindex.m_Position);
     
         m_FileMetadataIndexManager.WriteFiles(
