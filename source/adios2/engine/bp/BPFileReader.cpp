@@ -140,7 +140,7 @@ void BPFileReader::InitTransports()
         m_FileManager.OpenFiles({metadataFile}, adios2::Mode::Read,
                                 m_IO.m_TransportsParameters, profile);
 
-        const std::string metadataIndexFile("metadata.index");
+        const std::string metadataIndexFile(metadataFile+".metadata.index");
         m_FileMetadataIndexManager.OpenFiles({metadataIndexFile}, adios2::Mode::Read,
                                 m_IO.m_TransportsParameters, profile);
 
@@ -173,8 +173,12 @@ void BPFileReader::InitBuffer()
 
     BroadcastVector(m_BP3Deserializer.m_MetadataIndex.m_Buffer, m_MPIComm);
 
+    m_BP3Deserializer.ParseMetadataIndex(m_BP3Deserializer.m_MetadataIndex);
+
+    m_BP3Deserializer.ParseMetadataNew(m_BP3Deserializer.m_Metadata, m_IO);
+
     // fills IO with Variables and Attributes
-    m_BP3Deserializer.ParseMetadata(m_BP3Deserializer.m_Metadata, m_IO);
+    //m_BP3Deserializer.ParseMetadata(m_BP3Deserializer.m_Metadata, m_IO);
 }
 
 #define declare_type(T)                                                        \

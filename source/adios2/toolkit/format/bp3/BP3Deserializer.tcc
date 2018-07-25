@@ -15,6 +15,7 @@
 
 #include <algorithm> //std::reverse
 #include <unordered_set>
+#include <iostream>
 
 #include "adios2/helper/adiosFunctions.h"
 
@@ -162,6 +163,131 @@ BP3Deserializer::DefineVariableInIO(const ElementIndexHeader &header, IO &io,
     }
 
     Variable<T> *variable = nullptr;
+    if (characteristics.Statistics.IsValue)
+    {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        variable = &io.DefineVariable<T>(variableName);
+        variable->m_Value = characteristics.Statistics.Value;
+        variable->m_Min = characteristics.Statistics.Value;
+        variable->m_Max = characteristics.Statistics.Value;
+    }
+    else
+    {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+
+        if (m_ReverseDimensions)
+        {
+            std::reverse(characteristics.Shape.begin(),
+                         characteristics.Shape.end());
+        }
+
+        variable = &io.DefineVariable<T>(variableName, characteristics.Shape,
+                                         Dims(characteristics.Shape.size(), 0),
+                                         characteristics.Shape);
+
+        variable->m_Min = characteristics.Statistics.Min;
+        variable->m_Max = characteristics.Statistics.Max;
+    }
+
+    // going back to get variable index position
+    variable->m_IndexStart =
+        initialPosition - (header.Name.size() + header.GroupName.size() +
+                           header.Path.size() + 23);
+
+    const size_t endPosition =
+        variable->m_IndexStart + static_cast<size_t>(header.Length) + 4;
+
+    position = initialPosition;
+
+    size_t currentStep = 0; // Starts at 1 in bp file
+    std::unordered_set<uint32_t> stepsFound;
+    variable->m_AvailableStepsCount = 0;
+    while (position < endPosition)
+    {
+        const size_t subsetPosition = position;
+
+        // read until step is found
+        const Characteristics<typename TypeInfo<T>::ValueType>
+            subsetCharacteristics = ReadElementIndexCharacteristics<
+                typename TypeInfo<T>::ValueType>(
+                buffer, position, static_cast<DataTypes>(header.DataType),
+                false);
+
+        if (subsetCharacteristics.Statistics.Min < variable->m_Min)
+        {
+            variable->m_Min = subsetCharacteristics.Statistics.Min;
+        }
+
+        if (subsetCharacteristics.Statistics.Max > variable->m_Max)
+        {
+            variable->m_Max = subsetCharacteristics.Statistics.Max;
+        }
+
+        if (subsetCharacteristics.Statistics.Step > currentStep)
+        {
+            currentStep = subsetCharacteristics.Statistics.Step;
+        }
+        if (stepsFound.insert(subsetCharacteristics.Statistics.Step).second)
+        {
+            ++variable->m_AvailableStepsCount;
+        }
+        variable->m_IndexStepBlockStarts[currentStep].push_back(subsetPosition);
+        position = subsetPosition + subsetCharacteristics.EntryLength + 5;
+    }
+}
+
+template <class T>
+inline void
+BP3Deserializer::DefineVariableInIOPerStep(const ElementIndexHeader &header, IO &io,
+                                    const std::vector<char> &buffer,
+                                    size_t position, size_t step) const
+{
+    const size_t initialPosition = position;
+
+    Characteristics<T> characteristics = ReadElementIndexCharacteristics<T>(
+        buffer, position, static_cast<DataTypes>(header.DataType));
+
+    std::string variableName(header.Name);
+    if (!header.Path.empty())
+    {
+        variableName = header.Path + PathSeparator + header.Name;
+    }
+
+    Variable<T> *variable = nullptr;
+    variable = io.InquireVariable<T>(variableName);
+    if (variable)
+    {
+        //std::cout << "variable " << variableName << " has been defined!" << std::endl;
+        //std::cout << "header.Name.size(): " << header.Name.size() << "header.GroupName.size(): " << header.GroupName.size() << "header.Path.size(): " << header.Path.size() << "static_cast<size_t>(header.Length): " << static_cast<size_t>(header.Length) << std::endl;
+        size_t endPositionCurrentStep = initialPosition - (header.Name.size() + header.GroupName.size() + header.Path.size() + 23) + static_cast<size_t>(header.Length) + 4;
+        position = initialPosition;
+        variable->m_AvailableStepsCount = step;
+        while (position < endPositionCurrentStep)
+        {
+            const size_t subsetPosition = position;
+
+            // read until step is found
+            const Characteristics<typename TypeInfo<T>::ValueType>
+                subsetCharacteristics = ReadElementIndexCharacteristics<
+                    typename TypeInfo<T>::ValueType>(
+                    buffer, position, static_cast<DataTypes>(header.DataType),
+                    false);
+
+            if (subsetCharacteristics.Statistics.Min < variable->m_Min)
+            {
+                variable->m_Min = subsetCharacteristics.Statistics.Min;
+            }
+
+            if (subsetCharacteristics.Statistics.Max > variable->m_Max)
+            {
+                variable->m_Max = subsetCharacteristics.Statistics.Max;
+            }
+            variable->m_IndexStepBlockStarts[step].push_back(subsetPosition);
+            position = subsetPosition + subsetCharacteristics.EntryLength + 5;
+        }
+        return;        
+    }
+
     if (characteristics.Statistics.IsValue)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);

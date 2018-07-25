@@ -364,13 +364,15 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
         metadataindex.m_Position = 0;
 
         std::vector<std::string> metadataIndexFileNames;
-        metadataIndexFileNames.push_back("metadata.index");
+        metadataIndexFileNames.push_back(bpMetadataFileNames[0]+".metadata.index");
         m_FileMetadataIndexManager.OpenFiles(metadataIndexFileNames, adios2::Mode::Append,
                                         m_IO.m_TransportsParameters,
                                         m_BP3Serializer.m_Profiler.IsActive);
         metadataIndexFileNames.pop_back();
 
-        if (m_BP3Serializer.m_MetadataSet.CurrentStep == 1)
+        uint64_t currentStep = m_BP3Serializer.m_MetadataSet.TimeStep-1; // The current TimeStep has already been increased by 1 at this point, so decrease it by 1
+
+        if ( currentStep == 1)     // BP3 TimeStep starts from 1
         {
             PopulateMetadataIndexFileHeader(metadataindex.m_Buffer, metadataindex.m_Position, 3, true);
             m_FileMetadataIndexManager.WriteFiles(
@@ -382,7 +384,7 @@ void BPFileWriter::WriteCollectiveMetadataFile(const bool isFinal)
             metadataindex.m_Position = 0;
         }
 
-        PopulateMetadataIndexFileContent(m_BP3Serializer.m_MetadataSet.CurrentStep, m_BP3Serializer.m_RankMPI,
+        PopulateMetadataIndexFileContent(currentStep, m_BP3Serializer.m_RankMPI,
             pgIndexStartMetadataFile, varIndexStartMetadataFile, attrIndexStartMetadataFile, endptrValue, 
             metadataindex.m_Buffer, metadataindex.m_Position);
     

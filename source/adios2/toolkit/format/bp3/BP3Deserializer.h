@@ -30,6 +30,8 @@ public:
     /** BP Minifooter fields */
     Minifooter m_Minifooter;
 
+    std::unordered_map<uint64_t, std::vector<uint64_t>> m_MetadataIndexTable;
+
     bool m_PerformedGets = true;
 
     BufferSTL m_MetadataIndex;
@@ -44,6 +46,8 @@ public:
     ~BP3Deserializer() = default;
 
     void ParseMetadata(const BufferSTL &bufferSTL, IO &io);
+
+    void ParseMetadataNew(const BufferSTL &bufferSTL, IO &io);
 
     void ParseMetadataIndex(const BufferSTL &bufferSTL);
 
@@ -94,8 +98,13 @@ private:
     void ParseMinifooter(const BufferSTL &bufferSTL);
 
     void ParsePGIndex(const BufferSTL &bufferSTL, const IO &io);
+    void ParsePGIndexPerStep(const BufferSTL &bufferSTL, const IO &io, size_t step);    
+
     void ParseVariablesIndex(const BufferSTL &bufferSTL, IO &io);
+    void ParseVariablesIndexPerStep(const BufferSTL &bufferSTL, IO &io, size_t step);
+
     void ParseAttributesIndex(const BufferSTL &bufferSTL, IO &io);
+    void ParseAttributesIndexPerStep(const BufferSTL &bufferSTL, IO &io, size_t step);
 
     /**
      * Reads a variable index element (serialized) and calls IO.DefineVariable
@@ -109,6 +118,12 @@ private:
     void DefineVariableInIO(const ElementIndexHeader &header, IO &io,
                             const std::vector<char> &buffer,
                             size_t position) const;
+
+
+    template <class T>
+    void DefineVariableInIOPerStep(const ElementIndexHeader &header, IO &io,
+                            const std::vector<char> &buffer,
+                            size_t position, size_t step) const;
 
     template <class T>
     void DefineAttributeInIO(const ElementIndexHeader &header, IO &io,
