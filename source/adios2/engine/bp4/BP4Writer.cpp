@@ -114,7 +114,9 @@ void BP4Writer::Flush(const int transportIndex)
 
     if (m_BP4Serializer.m_CollectiveMetadata)
     {
+        m_BP4Serializer.ProfilerStart("meta_total");
         WriteCollectiveMetadataFile();
+        m_BP4Serializer.ProfilerStop("meta_total");
     }
 }
 
@@ -242,7 +244,9 @@ void BP4Writer::DoClose(const int transportIndex)
         if (m_BP4Serializer.m_CollectiveMetadata &&
             m_FileDataManager.AllTransportsClosed())
         {
+            m_BP4Serializer.ProfilerStart("meta_total");
             WriteCollectiveMetadataFile(false);
+            m_BP4Serializer.ProfilerStop("meta_total");
         }
     }
 
@@ -256,7 +260,9 @@ void BP4Writer::DoClose(const int transportIndex)
     if (m_BP4Serializer.m_CollectiveMetadata &&
         m_FileDataManager.AllTransportsClosed())
     {
+        m_BP4Serializer.ProfilerStart("meta_total");
         WriteCollectiveMetadataFile(true);
+        m_BP4Serializer.ProfilerStop("meta_total");
     }
 
     if (m_BP4Serializer.m_Profiler.IsActive &&

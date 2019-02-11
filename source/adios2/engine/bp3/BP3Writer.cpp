@@ -112,7 +112,9 @@ void BP3Writer::Flush(const int transportIndex)
 
     if (m_BP3Serializer.m_CollectiveMetadata)
     {
+        m_BP3Serializer.ProfilerStart("meta_total");
         WriteCollectiveMetadataFile();
+        m_BP3Serializer.ProfilerStop("meta_total");
     }
 }
 
@@ -225,7 +227,9 @@ void BP3Writer::DoClose(const int transportIndex)
     if (m_BP3Serializer.m_CollectiveMetadata &&
         m_FileDataManager.AllTransportsClosed())
     {
+        m_BP3Serializer.ProfilerStart("meta_total");
         WriteCollectiveMetadataFile(true);
+        m_BP3Serializer.ProfilerStop("meta_total");
     }
 
     if (m_BP3Serializer.m_Profiler.IsActive &&

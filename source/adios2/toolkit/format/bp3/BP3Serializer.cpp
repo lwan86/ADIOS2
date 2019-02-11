@@ -233,6 +233,7 @@ std::string BP3Serializer::GetRankProfilingJSON(
     lf_WriterTimer(rankLog, profiler.Timers.at("minmax"));
     lf_WriterTimer(rankLog, profiler.Timers.at("meta_sort_merge"));
     lf_WriterTimer(rankLog, profiler.Timers.at("mkdir"));
+    lf_WriterTimer(rankLog, profiler.Timers.at("meta_total"));
 
     const size_t transportsSize = transportsTypes.size();
 
