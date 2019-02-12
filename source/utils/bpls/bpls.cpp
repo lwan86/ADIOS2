@@ -1062,14 +1062,17 @@ std::vector<std::string> getEnginesList(const std::string path)
     if (slen >= 3 && path.compare(slen - 3, 3, ".h5") == 0)
     {
         list.push_back("HDF5");
+        list.push_back("BP4File");
         list.push_back("BPFile");
     }
     else
     {
+        list.push_back("BP4File");
         list.push_back("BPFile");
         list.push_back("HDF5");
     }
 #else
+    list.push_back("BP4File");
     list.push_back("BPFile");
 #endif
     return list;
