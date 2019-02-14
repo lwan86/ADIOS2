@@ -294,12 +294,22 @@ void BP4Writer::WriteProfilingJSONFile()
     auto transportTypesMD = m_FileMetadataManager.GetTransportsTypes();
     auto transportProfilersMD = m_FileMetadataManager.GetTransportsProfilers();
 
+    auto transportTypesMDIdx = m_FileMetadataIndexManager.GetTransportsTypes();
+    auto transportProfilersMDIdx = m_FileMetadataIndexManager.GetTransportsProfilers();
+
     transportTypes.insert(transportTypes.end(), transportTypesMD.begin(),
                           transportTypesMD.end());
+
+    transportTypes.insert(transportTypes.end(), transportTypesMDIdx.begin(),
+                          transportTypesMDIdx.end());
 
     transportProfilers.insert(transportProfilers.end(),
                               transportProfilersMD.begin(),
                               transportProfilersMD.end());
+
+    transportProfilers.insert(transportProfilers.end(),
+                              transportProfilersMDIdx.begin(),
+                              transportProfilersMDIdx.end());
 
     const std::string lineJSON(m_BP4Serializer.GetRankProfilingJSON(
                                    transportTypes, transportProfilers) +
