@@ -214,6 +214,12 @@ public:
     /** true: NVMex each rank creates its own directory */
     bool m_NodeLocal = false;
 
+    bool m_HybridPlacement = false;
+    std::string m_NVMePath;
+    bool m_InNVMe = false;
+    size_t m_PositionInNVMe = 0;
+    size_t m_PositionInPFS = 0;
+
     /**
      * Unique constructor
      * @param mpiComm for m_BP1Aggregator
@@ -242,6 +248,10 @@ public:
      */
     std::vector<std::string>
     GetBPSubStreamNames(const std::vector<std::string> &baseNames) const
+        noexcept;
+
+    std::vector<std::string>
+    GetBPNVMeSubStreamNames(const std::vector<std::string> &baseNames) const
         noexcept;
 
     std::vector<std::string>
@@ -571,6 +581,8 @@ protected:
      * stream */
     void InitParameterNodeLocal(const std::string value);
 
+    void InitParameterHybridPlacement(const std::string value);
+
     std::vector<uint8_t>
     GetTransportIDs(const std::vector<std::string> &transportsTypes) const
         noexcept;
@@ -630,6 +642,7 @@ protected:
 
 private:
     std::string GetBPSubStreamName(const std::string &name, const size_t rank,
+                                   const size_t dataLocation,
                                    const bool hasSubFiles = true) const
         noexcept;
 

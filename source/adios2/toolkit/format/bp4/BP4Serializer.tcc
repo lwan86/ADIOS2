@@ -35,7 +35,15 @@ inline void BP4Serializer::PutVariableMetadata(
         }
         else
         {
-            offset = static_cast<uint64_t>(m_Data.m_AbsolutePosition);
+            //offset = static_cast<uint64_t>(m_Data.m_AbsolutePosition);
+            if (m_InNVMe)
+            {
+                offset = static_cast<uint64_t>(m_Data.m_Position+m_PositionInNVMe);
+            }
+            else
+            {
+                offset = static_cast<uint64_t>(m_Data.m_Position+m_PositionInPFS);
+            }       
         }
     };
 

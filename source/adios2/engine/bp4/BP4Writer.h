@@ -58,6 +58,8 @@ private:
     /* transport manager for managing the metadata index file */
     transportman::TransportMan m_FileMetadataIndexManager;
 
+    transportman::TransportMan m_FileDataNVMeManager;
+
     void Init() final;
 
     /** Parses parameters from IO SetParameters */
@@ -99,9 +101,10 @@ private:
                                          const bool addSubfiles);
 
     void PopulateMetadataIndexFileContent(
-        const uint64_t currentStep, const uint64_t mpirank,
+        const uint64_t currentStep, const uint64_t mpiRank,
         const uint64_t pgIndexStart, const uint64_t variablesIndexStart,
         const uint64_t attributesIndexStart, const uint64_t currentStepEndPos,
+        const uint64_t dataLocation,
         std::vector<char> &buffer, size_t &position);
 
     void WriteCollectiveMetadataFile(const bool isFinal = false);

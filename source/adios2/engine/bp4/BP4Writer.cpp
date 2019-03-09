@@ -8,6 +8,8 @@
  *      Author: Lipeng Wan wanl@ornl.gov
  */
 
+#include <cstdlib>
+
 #include "BP4Writer.h"
 #include "BP4Writer.tcc"
 
@@ -29,6 +31,7 @@ BP4Writer::BP4Writer(IO &io, const std::string &name, const Mode mode,
 : Engine("BP4Writer", io, name, mode, mpiComm),
   m_BP4Serializer(mpiComm, m_DebugMode),
   m_FileDataManager(mpiComm, m_DebugMode),
+  m_FileDataNVMeManager(mpiComm, m_DebugMode),
   m_FileMetadataManager(mpiComm, m_DebugMode),
   m_FileMetadataIndexManager(mpiComm, m_DebugMode)
 {
@@ -44,6 +47,20 @@ StepStatus BP4Writer::BeginStep(StepMode mode, const float timeoutSeconds)
     m_BP4Serializer.m_DeferredVariables.clear();
     m_BP4Serializer.m_DeferredVariablesDataSize = 0;
     m_IO.m_ReadStreaming = false;
+
+    if (m_BP4Serializer.m_HybridPlacement)
+    {
+        int random_variable = std::rand()%10;
+        if (random_variable < 5)
+        {
+            m_BP4Serializer.m_InNVMe = true;
+        }
+        else
+        {
+            m_BP4Serializer.m_InNVMe = false;
+        }
+    }
+
     return StepStatus::OK;
 }
 
@@ -158,6 +175,8 @@ void BP4Writer::InitTransports()
     // only consumers will interact with transport managers
     std::vector<std::string> bpSubStreamNames;
 
+    std::vector<std::string> bpNVMeSubStreamNames;
+
     if (m_BP4Serializer.m_Aggregator.m_IsConsumer)
     {
         // Names passed to IO AddTransport option with key "Name"
@@ -167,11 +186,19 @@ void BP4Writer::InitTransports()
 
         // /path/name.bp.dir/name.bp.rank
         bpSubStreamNames = m_BP4Serializer.GetBPSubStreamNames(transportsNames);
+
+        bpNVMeSubStreamNames = m_BP4Serializer.GetBPNVMeSubStreamNames(transportsNames);
     }
 
     m_BP4Serializer.ProfilerStart("mkdir");
     m_FileDataManager.MkDirsBarrier(bpSubStreamNames,
                                     m_BP4Serializer.m_NodeLocal);
+    if (m_BP4Serializer.m_HybridPlacement)
+    {
+        m_FileDataNVMeManager.MkDirsBarrier(bpNVMeSubStreamNames,
+                                    m_BP4Serializer.m_NodeLocal);
+    }
+
     m_BP4Serializer.ProfilerStop("mkdir");
 
     if (m_BP4Serializer.m_Aggregator.m_IsConsumer)
@@ -179,6 +206,14 @@ void BP4Writer::InitTransports()
         m_FileDataManager.OpenFiles(bpSubStreamNames, m_OpenMode,
                                     m_IO.m_TransportsParameters,
                                     m_BP4Serializer.m_Profiler.IsActive);
+        
+        if (m_BP4Serializer.m_HybridPlacement)
+        {
+            m_FileDataNVMeManager.OpenFiles(bpNVMeSubStreamNames, m_OpenMode,
+                                    m_IO.m_TransportsParameters,
+                                    m_BP4Serializer.m_Profiler.IsActive);
+        }
+        
     }
 
     if (m_BP4Serializer.m_RankMPI == 0)
@@ -251,6 +286,11 @@ void BP4Writer::DoClose(const int transportIndex)
     if (m_BP4Serializer.m_Aggregator.m_IsConsumer)
     {
         m_FileDataManager.CloseFiles(transportIndex);
+        
+        if (m_BP4Serializer.m_HybridPlacement)
+        {
+            m_FileDataNVMeManager.CloseFiles(transportIndex);
+        }
     }
 
     if (m_BP4Serializer.m_CollectiveMetadata &&
@@ -363,22 +403,25 @@ void BP4Writer::PopulateMetadataIndexFileHeader(std::vector<char> &buffer,
         helper::CopyToBuffer(buffer, position, &zeros2);
     }
     helper::CopyToBuffer(buffer, position, &version);
-    position += 16;
+    position += 32;
 }
 
 /*write the content of metadata index file*/
 void BP4Writer::PopulateMetadataIndexFileContent(
-    const uint64_t currentStep, const uint64_t mpirank,
+    const uint64_t currentStep, const uint64_t mpiRank,
     const uint64_t pgIndexStart, const uint64_t variablesIndexStart,
     const uint64_t attributesIndexStart, const uint64_t currentStepEndPos,
+    const uint64_t dataLocation,
     std::vector<char> &buffer, size_t &position)
 {
     helper::CopyToBuffer(buffer, position, &currentStep);
-    helper::CopyToBuffer(buffer, position, &mpirank);
+    helper::CopyToBuffer(buffer, position, &mpiRank);
     helper::CopyToBuffer(buffer, position, &pgIndexStart);
     helper::CopyToBuffer(buffer, position, &variablesIndexStart);
     helper::CopyToBuffer(buffer, position, &attributesIndexStart);
     helper::CopyToBuffer(buffer, position, &currentStepEndPos);
+    helper::CopyToBuffer(buffer, position, &dataLocation);
+    position += 8;
 }
 
 void BP4Writer::WriteCollectiveMetadataFile(const bool isFinal)
@@ -434,7 +477,7 @@ void BP4Writer::WriteCollectiveMetadataFile(const bool isFinal)
             m_BP4Serializer.m_Metadata.m_Position;
 
         BufferSTL metadataIndex;
-        metadataIndex.m_Buffer.resize(48);
+        metadataIndex.m_Buffer.resize(64);
         metadataIndex.m_Buffer.assign(metadataIndex.m_Buffer.size(), '\0');
         metadataIndex.m_Position = 0;
 
@@ -472,15 +515,25 @@ void BP4Writer::WriteCollectiveMetadataFile(const bool isFinal)
             m_FileMetadataIndexManager.WriteFiles(metadataIndex.m_Buffer.data(),
                                                   metadataIndex.m_Position);
 
-            metadataIndex.m_Buffer.resize(48);
+            metadataIndex.m_Buffer.resize(64);
             metadataIndex.m_Buffer.assign(metadataIndex.m_Buffer.size(), '\0');
             metadataIndex.m_Position = 0;
+        }
+
+        uint64_t dataLocation;
+        if (m_BP4Serializer.m_InNVMe)
+        {
+            dataLocation = 1;
+        }
+        else
+        {
+            dataLocation = 0;
         }
 
         PopulateMetadataIndexFileContent(
             currentStep, m_BP4Serializer.m_RankMPI, pgIndexStartMetadataFile,
             varIndexStartMetadataFile, attrIndexStartMetadataFile,
-            currentStepEndPos, metadataIndex.m_Buffer,
+            currentStepEndPos, dataLocation, metadataIndex.m_Buffer,
             metadataIndex.m_Position);
 
         m_FileMetadataIndexManager.WriteFiles(metadataIndex.m_Buffer.data(),
@@ -517,10 +570,22 @@ void BP4Writer::WriteData(const bool isFinal, const int transportIndex)
         m_BP4Serializer.CloseStream(m_IO);
     }
 
-    m_FileDataManager.WriteFiles(m_BP4Serializer.m_Data.m_Buffer.data(),
-                                 dataSize, transportIndex);
+    if (m_BP4Serializer.m_InNVMe)
+    {
+        m_FileDataNVMeManager.WriteFiles(m_BP4Serializer.m_Data.m_Buffer.data(),
+                                    dataSize, transportIndex);
+        m_FileDataNVMeManager.FlushFiles(transportIndex);     
+        m_BP4Serializer.m_PositionInNVMe += dataSize;                      
+    }
+    else
+    {
+        m_FileDataManager.WriteFiles(m_BP4Serializer.m_Data.m_Buffer.data(),
+                                    dataSize, transportIndex);
 
-    m_FileDataManager.FlushFiles(transportIndex);
+        m_FileDataManager.FlushFiles(transportIndex);
+        m_BP4Serializer.m_PositionInPFS += dataSize;  
+    }
+
 }
 
 void BP4Writer::AggregateWriteData(const bool isFinal, const int transportIndex)

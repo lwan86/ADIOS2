@@ -67,7 +67,11 @@ void BP4Base::InitParameters(const Params &parameters)
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 
         std::string value(pair.second);
-        std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+        if (key != "hybridplacement")
+        {
+            std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+        }
+        
 
         if (key == "profile")
         {
@@ -114,6 +118,10 @@ void BP4Base::InitParameters(const Params &parameters)
         else if (key == "node-local")
         {
             InitParameterNodeLocal(value);
+        }
+        else if (key == "hybridplacement")
+        {
+            InitParameterHybridPlacement(value);
         }
     }
 
@@ -259,16 +267,32 @@ BP4Base::GetBPSubStreamNames(const std::vector<std::string> &names) const
     for (const auto &name : names)
     {
         bpNames.push_back(
-            GetBPSubStreamName(name, static_cast<unsigned int>(m_RankMPI)));
+            GetBPSubStreamName(name, static_cast<unsigned int>(m_RankMPI), 0));
     }
     return bpNames;
+}
+
+std::vector<std::string>
+BP4Base::GetBPNVMeSubStreamNames(const std::vector<std::string> &names) const
+    noexcept
+{
+    std::vector<std::string> bpNVMeNames;
+    bpNVMeNames.reserve(names.size());
+
+    for (const auto &name : names)
+    {
+        std::string nvmename = m_NVMePath+PathSeparator+name;
+        bpNVMeNames.push_back(
+            GetBPSubStreamName(nvmename, static_cast<unsigned int>(m_RankMPI), 1));
+    }
+    return bpNVMeNames;
 }
 
 std::string BP4Base::GetBPSubFileName(const std::string &name,
                                       const size_t subFileIndex,
                                       const bool hasSubFiles) const noexcept
 {
-    return GetBPSubStreamName(name, subFileIndex, hasSubFiles);
+    return GetBPSubStreamName(name, subFileIndex, 0, hasSubFiles);
 }
 
 size_t BP4Base::GetBPIndexSizeInData(const std::string &variableName,
@@ -405,6 +429,12 @@ void BP4Base::InitOnOffParameter(const std::string value, bool &parameter,
 void BP4Base::InitParameterProfile(const std::string value)
 {
     InitOnOffParameter(value, m_Profiler.IsActive, "valid: Profile On or Off");
+}
+
+void BP4Base::InitParameterHybridPlacement(const std::string value)
+{
+    m_HybridPlacement = true;
+    m_NVMePath = value;  
 }
 
 void BP4Base::InitParameterProfileUnits(const std::string value)
@@ -910,6 +940,7 @@ BP4Base::SetBP4Operation(const std::string type) const noexcept
 // PRIVATE
 std::string BP4Base::GetBPSubStreamName(const std::string &name,
                                         const size_t rank,
+                                        const size_t dataLocation,
                                         const bool hasSubFiles) const noexcept
 {
     if (!hasSubFiles)
@@ -934,8 +965,8 @@ std::string BP4Base::GetBPSubStreamName(const std::string &name,
     // const std::string bpRankName(bpName + ".dir" + PathSeparator + bpRoot +
     //                             "." + std::to_string(index));
     /* the name of a data file starts with "data." */
-    const std::string bpRankName(bpName + PathSeparator + "data." +
-                                 std::to_string(index));
+    const std::string bpRankName(bpName + PathSeparator + "data." + std::to_string(dataLocation)
+                                 + "." + std::to_string(index));
     return bpRankName;
 }
 
