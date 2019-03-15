@@ -290,9 +290,10 @@ BP4Base::GetBPNVMeSubStreamNames(const std::vector<std::string> &names) const
 
 std::string BP4Base::GetBPSubFileName(const std::string &name,
                                       const size_t subFileIndex,
+                                      const size_t dataLocation,
                                       const bool hasSubFiles) const noexcept
 {
-    return GetBPSubStreamName(name, subFileIndex, 0, hasSubFiles);
+    return GetBPSubStreamName(name, subFileIndex, dataLocation, hasSubFiles);
 }
 
 size_t BP4Base::GetBPIndexSizeInData(const std::string &variableName,

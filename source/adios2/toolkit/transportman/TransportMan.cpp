@@ -99,6 +99,17 @@ void TransportMan::OpenFileID(const std::string &name, const size_t id,
     m_Transports.insert({id, file});
 }
 
+void TransportMan::OpenHybridFileID(const std::string &name, const size_t rank, const size_t location,
+                              const Mode mode, const Params &parameters,
+                              const bool profile)
+{
+    std::shared_ptr<Transport> file =
+        OpenFileTransport(name, mode, parameters, profile);
+    std::string str_id(std::to_string(rank)+std::to_string(location));
+    size_t id = std::stoi(str_id);
+    m_Transports.insert({id, file});
+}
+
 std::vector<std::string> TransportMan::GetFilesBaseNames(
     const std::string &baseName,
     const std::vector<Params> &parametersVector) const
@@ -204,6 +215,17 @@ size_t TransportMan::GetFileSize(const size_t transportIndex) const
 void TransportMan::ReadFile(char *buffer, const size_t size, const size_t start,
                             const size_t transportIndex)
 {
+    auto itTransport = m_Transports.find(transportIndex);
+    CheckFile(itTransport, ", in call to ReadFile with index " +
+                               std::to_string(transportIndex));
+    itTransport->second->Read(buffer, size, start);
+}
+
+void TransportMan::ReadHybridFile(char *buffer, const size_t size, const size_t start,
+                            const size_t rank, const size_t location)
+{
+    std::string str_trans_id(std::to_string(rank)+std::to_string(location));
+    size_t transportIndex = std::stoi(str_trans_id);
     auto itTransport = m_Transports.find(transportIndex);
     CheckFile(itTransport, ", in call to ReadFile with index " +
                                std::to_string(transportIndex));

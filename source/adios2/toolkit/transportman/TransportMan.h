@@ -81,6 +81,11 @@ public:
     void OpenFileID(const std::string &name, const size_t id, const Mode mode,
                     const Params &parameters, const bool profile);
 
+
+    void OpenHybridFileID(const std::string &name, const size_t rank, const size_t location,
+                              const Mode mode, const Params &parameters,
+                              const bool profile);
+
     /**
      * Gets each transport base name from either baseName at Open or name
      * key in
@@ -128,6 +133,9 @@ public:
      */
     void ReadFile(char *buffer, const size_t size, const size_t start = 0,
                   const size_t transportIndex = 0);
+
+    void ReadHybridFile(char *buffer, const size_t size, const size_t start,
+                            const size_t rank, const size_t location);
 
     /**
      * Flush file or files depending on transport index. Throws an exception

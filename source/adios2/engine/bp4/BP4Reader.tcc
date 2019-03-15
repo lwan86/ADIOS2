@@ -79,17 +79,22 @@ void BP4Reader::ReadVariableBlocks(Variable<T> &variable)
                     continue;
                 }
 
+                size_t transID = std::stoi(std::to_string(subStreamBoxInfo.SubStreamID)+std::to_string(subStreamBoxInfo.DataLocationID)); 
                 // check if subfile is already opened
                 if (m_SubFileManager.m_Transports.count(
-                        subStreamBoxInfo.SubStreamID) == 0)
+                        transID) == 0)
                 {
                     const std::string subFileName =
                         m_BP4Deserializer.GetBPSubFileName(
                             m_Name, subStreamBoxInfo.SubStreamID,
+                            subStreamBoxInfo.DataLocationID,
                             m_BP4Deserializer.m_Minifooter.HasSubFiles);
 
-                    m_SubFileManager.OpenFileID(
-                        subFileName, subStreamBoxInfo.SubStreamID, Mode::Read,
+                    //m_SubFileManager.OpenFileID(
+                    //    subFileName, subStreamBoxInfo.SubStreamID, Mode::Read,
+                    //    {{"transport", "File"}}, profile);
+                    m_SubFileManager.OpenHybridFileID(
+                        subFileName, subStreamBoxInfo.SubStreamID, subStreamBoxInfo.DataLocationID, Mode::Read,
                         {{"transport", "File"}}, profile);
                 }
 
@@ -100,8 +105,10 @@ void BP4Reader::ReadVariableBlocks(Variable<T> &variable)
                                               subStreamBoxInfo, buffer,
                                               payloadSize, payloadStart, 0);
 
-                m_SubFileManager.ReadFile(buffer, payloadSize, payloadStart,
-                                          subStreamBoxInfo.SubStreamID);
+                //m_SubFileManager.ReadFile(buffer, payloadSize, payloadStart,
+                //                          subStreamBoxInfo.SubStreamID);
+                m_SubFileManager.ReadHybridFile(buffer, payloadSize, payloadStart,
+                                          subStreamBoxInfo.SubStreamID, subStreamBoxInfo.DataLocationID);
 
                 m_BP4Deserializer.PostDataRead(
                     variable, blockInfo, subStreamBoxInfo,

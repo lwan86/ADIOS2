@@ -269,6 +269,7 @@ public:
 
     std::string GetBPSubFileName(const std::string &name,
                                  const size_t subFileIndex,
+                                 const size_t dataLocation,
                                  const bool hasSubFiles = true) const noexcept;
 
     /**

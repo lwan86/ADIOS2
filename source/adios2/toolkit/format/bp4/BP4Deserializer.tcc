@@ -268,6 +268,9 @@ void BP4Deserializer::SetVariableBlockInfo(
         subStreamInfo.SubStreamID =
             static_cast<size_t>(blockCharacteristics.Statistics.FileIndex);
 
+        subStreamInfo.DataLocationID = 
+            m_MetadataIndexTable.at(0).at(step)[4];
+
         blockInfo.StepBlockSubStreamsInfo[step].push_back(
             std::move(subStreamInfo));
     };
@@ -373,6 +376,9 @@ void BP4Deserializer::SetVariableBlockInfo(
         }
         subStreamInfo.SubStreamID =
             static_cast<size_t>(blockCharacteristics.Statistics.FileIndex);
+        
+        subStreamInfo.DataLocationID = 
+            m_MetadataIndexTable.at(0).at(step)[4];
 
         blockInfo.StepBlockSubStreamsInfo[step].push_back(
             std::move(subStreamInfo));

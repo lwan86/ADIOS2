@@ -93,6 +93,9 @@ struct SubStreamBoxInfo
     /** particular substream ID */
     size_t SubStreamID;
 
+    /* indicates where the data is located (PFS, NVMe, etc.) */
+    size_t DataLocationID = 0;
+
     bool ZeroBlock = false;
 };
 
