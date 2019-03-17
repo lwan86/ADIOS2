@@ -74,6 +74,13 @@ inline void BP4Base::ParseCharacteristics(
             break;
         }
 
+        case (characteristic_data_location):
+        {
+            characteristics.Statistics.DataLocation =
+                helper::ReadValue<uint32_t>(buffer, position, isLittleEndian);
+            break;
+        }
+
         case (characteristic_value):
         {
             if (dataType == type_string)
@@ -220,6 +227,13 @@ inline void BP4Base::ParseCharacteristics(const std::vector<char> &buffer,
         case (characteristic_file_index):
         {
             characteristics.Statistics.FileIndex =
+                helper::ReadValue<uint32_t>(buffer, position, isLittleEndian);
+            break;
+        }
+
+        case (characteristic_data_location):
+        {
+            characteristics.Statistics.DataLocation =
                 helper::ReadValue<uint32_t>(buffer, position, isLittleEndian);
             break;
         }

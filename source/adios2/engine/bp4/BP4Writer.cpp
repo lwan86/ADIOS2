@@ -9,6 +9,8 @@
  */
 
 #include <cstdlib>
+#include <iostream>
+#include <ctime>
 
 #include "BP4Writer.h"
 #include "BP4Writer.tcc"
@@ -50,7 +52,13 @@ StepStatus BP4Writer::BeginStep(StepMode mode, const float timeoutSeconds)
 
     if (m_BP4Serializer.m_HybridPlacement)
     {
+        if (m_BP4Serializer.m_MetadataSet.CurrentStep == 0)
+        {
+            std::srand(m_BP4Serializer.m_RankMPI);
+        }
+        
         int random_variable = std::rand()%10;
+        std::cout << m_BP4Serializer.m_RankMPI << ", " << random_variable << std::endl;
         if (random_variable < 5)
         {
             m_BP4Serializer.m_InNVMe = true;

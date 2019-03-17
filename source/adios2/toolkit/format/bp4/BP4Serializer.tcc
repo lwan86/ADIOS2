@@ -374,6 +374,15 @@ BP4Serializer::GetBPStats(const bool singleValue,
     Stats<T> stats;
     stats.Step = m_MetadataSet.TimeStep;
     stats.FileIndex = GetFileIndex();
+    if (m_InNVMe)
+    {
+        stats.DataLocation = 1;
+    }
+    else
+    {
+        stats.DataLocation = 0;
+    }
+    
 
     if (singleValue)
     {
@@ -640,6 +649,9 @@ inline void BP4Serializer::PutVariableCharacteristics(
     PutCharacteristicRecord(characteristic_file_index, characteristicsCounter,
                             stats.FileIndex, buffer);
 
+    PutCharacteristicRecord(characteristic_data_location, characteristicsCounter,
+                            stats.DataLocation, buffer);
+
     uint8_t characteristicID = characteristic_value;
     helper::InsertToBuffer(buffer, &characteristicID);
     PutNameRecord(*blockInfo.Data, buffer);
@@ -695,6 +707,9 @@ void BP4Serializer::PutVariableCharacteristics(
 
     PutCharacteristicRecord(characteristic_file_index, characteristicsCounter,
                             stats.FileIndex, buffer);
+    
+    PutCharacteristicRecord(characteristic_data_location, characteristicsCounter,
+                            stats.DataLocation, buffer);
 
     if (blockInfo.Data != nullptr)
     {

@@ -419,7 +419,8 @@ protected:
         characteristic_time_index = 8,     //!< characteristic_time_index
         characteristic_bitmap = 9,         //!< characteristic_bitmap
         characteristic_stat = 10,          //!< characteristic_stat
-        characteristic_transform_type = 11 //!< characteristic_transform_type
+        characteristic_transform_type = 11, //!< characteristic_transform_type
+        characteristic_data_location = 12     //!< characteristic_data_location
     };
 
     /** Define statistics type for characteristic ID = 10 in bp1 format */
@@ -503,6 +504,7 @@ protected:
         std::vector<T> Values;
         uint32_t Step = 0;
         uint32_t FileIndex = 0;
+        uint32_t DataLocation = 0;
         uint32_t MemberID = 0;
         uint32_t BitCount = 0;
         std::bitset<32> Bitmap;
