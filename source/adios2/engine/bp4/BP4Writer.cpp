@@ -58,14 +58,15 @@ StepStatus BP4Writer::BeginStep(StepMode mode, const float timeoutSeconds)
         }
         
         int random_variable = std::rand()%10;
-        std::cout << m_BP4Serializer.m_RankMPI << ", " << random_variable << std::endl;
         if (random_variable < 5)
         {
             m_BP4Serializer.m_InNVMe = true;
+            std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", nvme" << std::endl;
         }
         else
         {
             m_BP4Serializer.m_InNVMe = false;
+            std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", pfs" << std::endl;
         }
     }
 
