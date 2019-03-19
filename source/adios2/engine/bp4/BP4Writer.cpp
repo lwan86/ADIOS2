@@ -48,6 +48,22 @@ StepStatus BP4Writer::BeginStep(StepMode mode, const float timeoutSeconds)
     m_BP4Serializer.m_DeferredVariablesDataSize = 0;
     m_IO.m_ReadStreaming = false;
 
+    if (m_BP4Serializer.m_MetadataSet.CurrentStep > 0 && m_BP4Serializer.m_RankMPI == 0)
+    {
+        std::cout << "write to nvme (" << m_BP4Serializer.m_Profiler.Timers.at("writenvme").GetShortUnits()<< "): ";
+        for (int t : m_BP4Serializer.m_Profiler.Timers.at("writenvme").m_HistoricalTime)
+        {
+            std::cout << t << ", ";
+        }
+        std::cout << std::endl;
+        std::cout << "write to pfs (" << m_BP4Serializer.m_Profiler.Timers.at("writepfs").GetShortUnits()<< "): ";
+        for (int t : m_BP4Serializer.m_Profiler.Timers.at("writepfs").m_HistoricalTime)
+        {
+            std::cout << t << ", ";
+        }
+        std::cout << std::endl;
+    }
+
     if (m_BP4Serializer.m_HybridPlacement)
     {
         int random_variable = std::rand()%10;
@@ -572,17 +588,21 @@ void BP4Writer::WriteData(const bool isFinal, const int transportIndex)
 
     if (m_BP4Serializer.m_InNVMe)
     {
+        m_BP4Serializer.ProfilerStart("writenvme");
         m_FileDataNVMeManager.WriteFiles(m_BP4Serializer.m_Data.m_Buffer.data(),
                                     dataSize, transportIndex);
-        m_FileDataNVMeManager.FlushFiles(transportIndex);     
+        m_FileDataNVMeManager.FlushFiles(transportIndex);
+        m_BP4Serializer.ProfilerStop("writenvme");    
         m_BP4Serializer.m_PositionInNVMe += dataSize;                      
     }
     else
     {
+        m_BP4Serializer.ProfilerStart("writepfs");
         m_FileDataManager.WriteFiles(m_BP4Serializer.m_Data.m_Buffer.data(),
                                     dataSize, transportIndex);
 
         m_FileDataManager.FlushFiles(transportIndex);
+        m_BP4Serializer.ProfilerStop("writepfs");
         m_BP4Serializer.m_PositionInPFS += dataSize;  
     }
 

@@ -266,6 +266,8 @@ std::string BP4Serializer::GetRankProfilingJSON(
     lf_WriterTimer(rankLog, profiler.Timers.at("minmax"));
     lf_WriterTimer(rankLog, profiler.Timers.at("meta_sort_merge"));
     lf_WriterTimer(rankLog, profiler.Timers.at("mkdir"));
+    lf_WriterTimer(rankLog, profiler.Timers.at("writenvme"));
+    lf_WriterTimer(rankLog, profiler.Timers.at("writepfs"));
 
     const size_t transportsSize = transportsTypes.size();
 
