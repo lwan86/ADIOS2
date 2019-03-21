@@ -54,21 +54,115 @@ StepStatus BP4Writer::BeginStep(StepMode mode, const float timeoutSeconds)
     {
         if (m_BP4Serializer.m_MetadataSet.CurrentStep == 0)
         {
-            std::srand(m_BP4Serializer.m_RankMPI);
+            m_BP4Serializer.m_InNVMe = false;
+            std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", pfs" << std::endl;
         }
-        
-        int random_variable = std::rand()%10;
-        if (random_variable < 5)
+        else if (m_BP4Serializer.m_MetadataSet.CurrentStep == 1)
         {
             m_BP4Serializer.m_InNVMe = true;
             std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", nvme" << std::endl;
         }
         else
         {
-            m_BP4Serializer.m_InNVMe = false;
-            std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", pfs" << std::endl;
-        }
+            // std::cout << "write to nvme (" << m_BP4Serializer.m_Profiler.Timers.at("writenvme").GetShortUnits()<< "): ";
+            // for (int t : m_BP4Serializer.m_Profiler.Timers.at("writenvme").m_HistoricalTime)
+            // {
+            //     std::cout << t << ", ";
+            // }
+            // std::cout << std::endl;
+            // std::cout << "bytes to nvme: ";
+            // for (int s : m_BP4Serializer.m_Profiler.HistoricalBytes.at("bytesnvme"))
+            // {
+            //     std::cout << s << ", ";
+            // }
+            // std::cout << std::endl;
+
+            // std::cout << "write to pfs (" << m_BP4Serializer.m_Profiler.Timers.at("writepfs").GetShortUnits()<< "): ";
+            // for (int t : m_BP4Serializer.m_Profiler.Timers.at("writepfs").m_HistoricalTime)
+            // {
+            //     std::cout << t << ", ";
+            // }
+            // std::cout << std::endl;
+            // std::cout << "bytes to pfs: ";
+            // for (int s : m_BP4Serializer.m_Profiler.HistoricalBytes.at("bytespfs"))
+            // {
+            //     std::cout << s << ", ";
+            // }
+            // std::cout << std::endl; 
+
+
+            std::vector<double> historicalNVMeBW = {};
+            std::vector<double> historicalPFSBW = {};
+            double avg_nvme_bw = -1.0;
+            double avg_pfs_bw = -1.0;
+            if (m_BP4Serializer.m_Profiler.Timers.at("writenvme").m_HistoricalTime.size())
+            {
+                for (int i = 0; i < m_BP4Serializer.m_Profiler.Timers.at("writenvme").m_HistoricalTime.size(); i++)
+                {
+                    double nvmebw = double(m_BP4Serializer.m_Profiler.HistoricalBytes.at("bytesnvme")[i])/double(m_BP4Serializer.m_Profiler.Timers.at("writenvme").m_HistoricalTime[i]);
+                    historicalNVMeBW.push_back(nvmebw);
+                }
+            // std::cout << "bandwidth to nvme (MB/s): ";
+            // for (double b : historicalNVMeBW)
+            // {
+            //     std::cout << b << ", ";
+            // }
+            // std::cout << std::endl;
+                avg_nvme_bw = std::accumulate(historicalNVMeBW.begin(), historicalNVMeBW.end(), 0.0)/historicalNVMeBW.size();
+            }
+            
+            if (m_BP4Serializer.m_Profiler.Timers.at("writepfs").m_HistoricalTime.size())
+            {
+                for (int i = 0; i < m_BP4Serializer.m_Profiler.Timers.at("writepfs").m_HistoricalTime.size(); i++)
+                {
+                    double pfsbw = double(m_BP4Serializer.m_Profiler.HistoricalBytes.at("bytespfs")[i])/double(m_BP4Serializer.m_Profiler.Timers.at("writepfs").m_HistoricalTime[i]);
+                    historicalPFSBW.push_back(pfsbw);
+                }
+            // std::cout << "bandwidth to pfs (MB/s): ";
+            // for (double b : historicalPFSBW)
+            // {
+            //     std::cout << b << ", ";
+            // }
+            // std::cout << std::endl;
+                avg_pfs_bw = std::accumulate(historicalPFSBW.begin(), historicalPFSBW.end(), 0.0)/historicalPFSBW.size();
+            }
+            
+            std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", avg nvme bandwidth: " << avg_nvme_bw << ", avg pfs bandwidth: " << avg_pfs_bw << std::endl;
+
+            if (avg_pfs_bw > avg_nvme_bw)
+            {
+                m_BP4Serializer.m_InNVMe = false;
+                std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", pfs" << std::endl;
+            }
+            else
+            {
+                m_BP4Serializer.m_InNVMe = true;
+                std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", nvme" << std::endl;
+            }
+            
+        }        
     }
+
+
+    // if (m_BP4Serializer.m_HybridPlacement)
+    // {
+    //     if (m_BP4Serializer.m_MetadataSet.CurrentStep == 0)
+    //     {
+    //         std::srand(m_BP4Serializer.m_RankMPI);
+    //     }
+        
+    //     int random_variable = std::rand()%10;
+    //     if (random_variable < 5)
+    //     {
+    //         m_BP4Serializer.m_InNVMe = true;
+    //         std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", nvme" << std::endl;
+    //     }
+    //     else
+    //     {
+    //         m_BP4Serializer.m_InNVMe = false;
+    //         std::cout << "rank " << m_BP4Serializer.m_RankMPI << ", pfs" << std::endl;
+    //     }
+    // }
 
     return StepStatus::OK;
 }
@@ -581,17 +675,23 @@ void BP4Writer::WriteData(const bool isFinal, const int transportIndex)
 
     if (m_BP4Serializer.m_InNVMe)
     {
+        m_BP4Serializer.ProfilerStart("writenvme");
         m_FileDataNVMeManager.WriteFiles(m_BP4Serializer.m_Data.m_Buffer.data(),
                                     dataSize, transportIndex);
-        m_FileDataNVMeManager.FlushFiles(transportIndex);     
+        m_FileDataNVMeManager.FlushFiles(transportIndex);
+        m_BP4Serializer.ProfilerStop("writenvme");    
+        m_BP4Serializer.m_Profiler.HistoricalBytes.at("bytesnvme").push_back(dataSize);
         m_BP4Serializer.m_PositionInNVMe += dataSize;                      
     }
     else
     {
+        m_BP4Serializer.ProfilerStart("writepfs");
         m_FileDataManager.WriteFiles(m_BP4Serializer.m_Data.m_Buffer.data(),
                                     dataSize, transportIndex);
 
         m_FileDataManager.FlushFiles(transportIndex);
+        m_BP4Serializer.ProfilerStop("writepfs");
+        m_BP4Serializer.m_Profiler.HistoricalBytes.at("bytespfs").push_back(dataSize);
         m_BP4Serializer.m_PositionInPFS += dataSize;  
     }
 

@@ -34,6 +34,8 @@ public:
     /** process elapsed time */
     int64_t m_ProcessTime = 0;
 
+    std::vector<int64_t> m_HistoricalTime;
+
     /** time unit for elapsed time from ADIOSTypes.h */
     const TimeUnit m_TimeUnit;
 

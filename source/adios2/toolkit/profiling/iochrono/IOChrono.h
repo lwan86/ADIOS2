@@ -43,6 +43,8 @@ struct IOChrono
     /** Create byte tracking counter for each process*/
     std::unordered_map<std::string, size_t> Bytes;
 
+    std::unordered_map<std::string, std::vector<size_t>> HistoricalBytes;
+
     /** flag to determine if IOChrono object is being used */
     bool IsActive = false;
 };

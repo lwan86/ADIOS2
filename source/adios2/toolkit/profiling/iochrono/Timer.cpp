@@ -34,6 +34,7 @@ void Timer::Pause()
 {
     m_ElapsedTime = std::chrono::high_resolution_clock::now();
     m_ProcessTime += GetElapsedTime();
+    m_HistoricalTime.push_back(GetElapsedTime());
 }
 
 std::string Timer::GetShortUnits() const noexcept
