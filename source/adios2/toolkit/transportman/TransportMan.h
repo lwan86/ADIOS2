@@ -37,6 +37,10 @@ public:
      */
     std::unordered_map<size_t, std::shared_ptr<Transport>> m_Transports;
 
+    std::unordered_map<std::string, std::string> m_PathToTier;
+
+    std::unordered_map<std::string, size_t> m_TierToTransportID;
+
     /**
      * Unique base constructor
      * @param mpiComm
@@ -65,7 +69,8 @@ public:
     void OpenFiles(const std::vector<std::string> &fileNames,
                    const Mode openMode,
                    const std::vector<Params> &parametersVector,
-                   const bool profile);
+                   const bool profile,
+                   const bool multiTierPlacement = false);
 
     /**
      * Async version of OpenFiles
@@ -103,7 +108,8 @@ public:
      */
     std::vector<std::string>
     GetFilesBaseNames(const std::string &baseName,
-                      const std::vector<Params> &parametersVector) const;
+                      const std::vector<Params> &parametersVector,
+                      const bool multiTierPlacement = false);
 
     /**
      * m_Type from m_Transports based on derived classes of Transport

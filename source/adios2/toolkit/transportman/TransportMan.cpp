@@ -75,7 +75,8 @@ void TransportMan::MkDirsBarrier(const std::vector<std::string> &fileNames,
 void TransportMan::OpenFiles(const std::vector<std::string> &fileNames,
                              const Mode openMode,
                              const std::vector<Params> &parametersVector,
-                             const bool profile)
+                             const bool profile,
+                             const bool multiTierPlacement)
 {
     for (size_t i = 0; i < fileNames.size(); ++i)
     {
@@ -87,6 +88,21 @@ void TransportMan::OpenFiles(const std::vector<std::string> &fileNames,
             std::shared_ptr<Transport> file =
                 OpenFileTransport(fileNames[i], openMode, parameters, profile);
             m_Transports.insert({i, file});
+            if (multiTierPlacement)
+            {
+                const auto lastPathSeparator(fileNames[i].find_last_of(PathSeparator));
+                std::string pathToFolder = fileNames[i].substr(0, lastPathSeparator);
+                std::string tier;
+                if (m_PathToTier.count(pathToFolder))
+                {
+                    tier = m_PathToTier.at(pathToFolder);                    
+                }
+                else
+                {
+                    tier = m_PathToTier.at(pathToFolder.substr(0, pathToFolder.size()-3));
+                }
+                m_TierToTransportID.insert({tier, i});
+            }
         }
     }
 }
@@ -128,7 +144,8 @@ void TransportMan::OpenFileID(const std::string &name, const size_t id,
 
 std::vector<std::string> TransportMan::GetFilesBaseNames(
     const std::string &baseName,
-    const std::vector<Params> &parametersVector) const
+    const std::vector<Params> &parametersVector,
+    const bool multiTierPlacement)
 {
     if (parametersVector.size() <= 1)
     {
@@ -145,6 +162,23 @@ std::vector<std::string> TransportMan::GetFilesBaseNames(
         std::string name(baseName);
         helper::SetParameterValue("Name", parameters, name); // if found in map
 
+        if (parameters.count("Tier"))
+        {
+            const std::string tier(parameters.at("Tier"));
+            const std::string path(parameters.at("Path"));
+            std::cout << tier << ": " << path << std::endl;
+            if (path.back() != '/')
+            {
+                name = path + PathSeparator + name;
+            }
+            else
+            {
+                name = path + name;
+            }
+                
+            std::cout << tier << ":" << name << std::endl;
+            m_PathToTier.emplace(name, tier);
+        }
         const std::string type(parameters.at("transport"));
 
         if (m_DebugMode)
@@ -166,6 +200,10 @@ std::vector<std::string> TransportMan::GetFilesBaseNames(
         }
         typeTransportNames[type].insert(name);
         baseNames.push_back(name);
+        if (!multiTierPlacement)
+        {
+            break;
+        }
     }
     return baseNames;
 }

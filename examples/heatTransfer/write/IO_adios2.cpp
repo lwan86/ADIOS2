@@ -21,7 +21,8 @@ adios2::Variable<unsigned int> varGndx;
 
 IO::IO(const Settings &s, MPI_Comm comm)
 {
-    m_outputfilename = MakeFilename(s.outputfile, ".bp");
+    //m_outputfilename = MakeFilename(s.outputfile, ".bp");
+    m_outputfilename = s.outputfile;
 
     ad = adios2::ADIOS(s.configfile, comm, adios2::DebugON);
 
@@ -37,6 +38,9 @@ IO::IO(const Settings &s, MPI_Comm comm)
         // Passing parameters to the transport
         bpio.AddTransport("File", {{"Library", "POSIX"}});
     }
+
+    bpio.AddTransport("File", {{"Library", "POSIX"}, {"Tier", "0"}, {"Path", "/Users/lwk/Research/Projects/adios2/adios2-bp4/fake-pfs"}});
+    bpio.AddTransport("File", {{"Library", "POSIX"}, {"Tier", "1"}, {"Path", "/Users/lwk/Research/Projects/adios2/adios2-bp4/fake-nvme/"}});
 
     // define T as 2D global array
     varT = bpio.DefineVariable<double>(

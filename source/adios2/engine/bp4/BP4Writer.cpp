@@ -171,10 +171,17 @@ void BP4Writer::InitTransports()
     {
         // Names passed to IO AddTransport option with key "Name"
         const std::vector<std::string> transportsNames =
-            m_FileDataManager.GetFilesBaseNames(m_Name,
-                                                m_IO.m_TransportsParameters);
+             m_FileDataManager.GetFilesBaseNames(m_Name,
+                            m_IO.m_TransportsParameters, m_BP4Serializer.m_MultiTierPlacement);
 
-        // /path/name.bp.dir/name.bp.rank
+        if (m_BP4Serializer.m_MultiTierPlacement)
+        {
+            m_BP4Serializer.m_PathToTier = m_FileDataManager.m_PathToTier;
+            // for (const auto&pair : m_BP4Serializer.m_PathToTier)
+            // {
+            //     std::cout << pair.first << ", " << pair.second << std::endl;
+            // }
+        }
         bpSubStreamNames = m_BP4Serializer.GetBPSubStreamNames(transportsNames);
     }
 
@@ -189,7 +196,8 @@ void BP4Writer::InitTransports()
         // bpSubStreamNames[0] << std::endl;
         m_FileDataManager.OpenFiles(bpSubStreamNames, m_OpenMode,
                                     m_IO.m_TransportsParameters,
-                                    m_BP4Serializer.m_Profiler.IsActive);
+                                    m_BP4Serializer.m_Profiler.IsActive,
+                                    m_BP4Serializer.m_MultiTierPlacement);
     }
 
     if (m_BP4Serializer.m_RankMPI == 0)
@@ -216,6 +224,23 @@ void BP4Writer::InitTransports()
 
 void BP4Writer::InitBPBuffer()
 {
+    if (m_BP4Serializer.m_MultiTierPlacement)
+    {
+        for (const auto& pair : m_BP4Serializer.m_PathToTier)
+        {
+            format::BufferSTL dataBuffer;
+            if (m_BP4Serializer.m_MultiTierInitBufferSize)
+            {
+                dataBuffer.Resize(m_BP4Serializer.m_MultiTierInitBufferSize, "in call to InitBPBuffer");
+            }
+            else
+            {
+                dataBuffer.Resize(DefaultInitialBufferSize, "in call to InitBPBuffer");
+            }
+            m_BP4Serializer.m_MultiTierData.insert({pair.second, dataBuffer});
+            m_BP4Serializer.m_MultiTierPreDataFileLength.insert({pair.second, 0});
+        }
+    }
     if (m_OpenMode == Mode::Append)
     {
         // throw std::invalid_argument(
@@ -269,8 +294,23 @@ void BP4Writer::InitBPBuffer()
 
             if (m_BP4Serializer.m_Aggregator.m_IsConsumer)
             {
-                m_BP4Serializer.m_PreDataFileLength =
-                    m_FileDataManager.GetFileSize(0);
+                if (m_BP4Serializer.m_MultiTierPlacement)
+                {
+                    for (auto & pair : m_BP4Serializer.m_MultiTierPreDataFileLength)
+                    {
+                        m_BP4Serializer.m_MultiTierPreDataFileLength[pair.first] = m_FileDataManager.GetFileSize(m_FileDataManager.m_TierToTransportID[pair.first]);
+                    }
+                    
+                }
+                else
+                {
+                    m_BP4Serializer.m_PreDataFileLength =
+                        m_FileDataManager.GetFileSize(0);
+                }
+                
+
+                
+
 
                 // std::cout << "size of existing data file: " <<
                 // m_BP4Serializer.m_PreDataFileLength << std::endl;
@@ -291,21 +331,47 @@ void BP4Writer::InitBPBuffer()
         }
     }
 
-    if (m_BP4Serializer.m_PreDataFileLength == 0)
+    if (m_BP4Serializer.m_MultiTierPlacement)
     {
-        /* This is a new file.
-         * Make headers in data buffer and metadata buffer
-         */
         if (m_BP4Serializer.m_RankMPI == 0)
         {
-            m_BP4Serializer.MakeHeader(m_BP4Serializer.m_Metadata, "Metadata",
+            if (m_BP4Serializer.m_PreMetadataFileLength == 0)
+            {
+                m_BP4Serializer.MakeHeader(m_BP4Serializer.m_Metadata, "Metadata",
                                        false);
+            }
         }
         if (m_BP4Serializer.m_Aggregator.m_IsConsumer)
         {
-            m_BP4Serializer.MakeHeader(m_BP4Serializer.m_Data, "Data", false);
+            for (const auto & pair : m_BP4Serializer.m_MultiTierPreDataFileLength)
+            {
+                if (pair.second == 0)
+                {
+                    m_BP4Serializer.MakeHeader(m_BP4Serializer.m_MultiTierData[pair.first], "Data", false);
+                }
+            }
+        } 
+
+    }
+    else
+    {
+        if (m_BP4Serializer.m_PreDataFileLength == 0)
+        {
+            /* This is a new file.
+            * Make headers in data buffer and metadata buffer
+            */
+            if (m_BP4Serializer.m_RankMPI == 0)
+            {
+                m_BP4Serializer.MakeHeader(m_BP4Serializer.m_Metadata, "Metadata",
+                                        false);
+            }
+            if (m_BP4Serializer.m_Aggregator.m_IsConsumer)
+            {
+                m_BP4Serializer.MakeHeader(m_BP4Serializer.m_Data, "Data", false);
+            }
         }
     }
+
 
     m_BP4Serializer.PutProcessGroupIndex(
         m_IO.m_Name, m_IO.m_HostLanguage,

@@ -246,6 +246,17 @@ public:
     const size_t m_VersionTagPosition = 0;
     const size_t m_VersionTagLength = 32;
 
+
+    bool m_MultiTierPlacement = false;
+    std::unordered_map<std::string, std::string> m_PathToTier;
+
+    /* contains data buffer for multi-tier storage */
+    std::unordered_map<std::string, BufferSTL> m_MultiTierData;
+
+    size_t m_MultiTierInitBufferSize = 0;
+
+    std::unordered_map<std::string, size_t> m_MultiTierPreDataFileLength;
+
     /**
      * Unique constructor
      * @param mpiComm for m_BP1Aggregator
@@ -612,6 +623,9 @@ protected:
      * Parameter should be a floating point number indicating time in seconds.
      * Default is 0.0 (no wait) */
     void InitParameterOpenTimeoutSecs(const std::string value);
+
+    /** Set paths for multi-tier data placement */
+    void InitParameterMultiTierPlacement(const std::string value);
 
     std::vector<uint8_t>
     GetTransportIDs(const std::vector<std::string> &transportsTypes) const

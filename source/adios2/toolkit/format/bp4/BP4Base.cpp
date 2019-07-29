@@ -72,6 +72,10 @@ void BP4Base::InitParameters(const Params &parameters)
         std::string value(pair.second);
         std::transform(value.begin(), value.end(), value.begin(), ::tolower);
 
+        if (key == "multitierplacement")
+        {
+            InitParameterMultiTierPlacement(value);
+        }
         if (key == "profile")
         {
             InitParameterProfile(value);
@@ -523,6 +527,8 @@ void BP4Base::InitParameterInitBufferSize(const std::string value)
 
     m_Data.Resize(bufferSize, "bufferSize " + std::to_string(bufferSize) +
                                   ", in call to Open");
+    
+    m_MultiTierInitBufferSize = bufferSize;
 }
 
 void BP4Base::InitParameterMaxBufferSize(const std::string value)
@@ -729,6 +735,11 @@ void BP4Base::InitParameterFlushStepsCount(const std::string value)
 void BP4Base::InitParameterNodeLocal(const std::string value)
 {
     InitOnOffParameter(value, m_NodeLocal, "valid: node-local On or Off");
+}
+
+void BP4Base::InitParameterMultiTierPlacement(const std::string value)
+{
+    InitOnOffParameter(value, m_MultiTierPlacement, "valid: multi-tier storage placement On or Off");
 }
 
 std::vector<uint8_t>
@@ -1003,9 +1014,13 @@ std::string BP4Base::GetBPSubStreamName(const std::string &name,
 
     const std::string bpName = helper::AddExtension(name, ".bp");
 
+
+    
+    
+
     // path/root.bp.dir/root.bp.Index
     // std::string bpRoot = bpName;
-    const auto lastPathSeparator(bpName.find_last_of(PathSeparator));
+    // const auto lastPathSeparator(bpName.find_last_of(PathSeparator));
 
     // if (lastPathSeparator != std::string::npos)
     // {
@@ -1019,8 +1034,28 @@ std::string BP4Base::GetBPSubStreamName(const std::string &name,
     // +
     //                             "." + std::to_string(index));
     /* the name of a data file starts with "data." */
-    const std::string bpRankName(bpName + PathSeparator + "data." +
-                                 std::to_string(index));
+    std::string bpRankName;
+    if (m_MultiTierPlacement)
+    {
+        std::string tier;
+        if (m_PathToTier.count(bpName))
+        {
+            tier = m_PathToTier.at(bpName);
+        }
+        else
+        {
+            tier = m_PathToTier.at(bpName.substr(0, bpName.size()-3));
+        }
+        bpRankName = bpName + PathSeparator + "data." + tier + "." +
+                        std::to_string(index);        
+    }
+    else
+    {
+        bpRankName = bpName + PathSeparator + "data." + 
+                        std::to_string(index);
+    }
+    
+
     return bpRankName;
 }
 
