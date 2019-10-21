@@ -13,6 +13,7 @@
 #include <cstring> //std::memcpy
 
 #include <mgard_api.h>
+#include <mgard_api_cuda.h>
 
 #include "adios2/helper/adiosFunctions.h"
 
@@ -96,12 +97,35 @@ size_t CompressMGARD::Compress(const void *dataIn, const Dims &dimensions,
     {
         s = std::stod(itSParameter->second);
     }
+    // check if GPU is enabled
+    bool gpuEnabled = false;
+    int gpuFlag = 0;
+    auto itGPUFlag = parameters.find("gpu");
+    if (itGPUFlag != parameters.end())
+    {
+        gpuFlag = std::stoi(itGPUFlag->second);
+	std::cout<<"gpu flag: " <<gpuFlag<<std::endl;
+	if (gpuFlag) 
+	{
+            gpuEnabled = true;
+	}
+    }
 
     int sizeOut = 0;
-    unsigned char *dataOutPtr = mgard_compress(
-        mgardType, const_cast<double *>(static_cast<const double *>(dataIn)),
-        sizeOut, r[0], r[1], r[2], tolerance, s);
-
+    unsigned char *dataOutPtr;
+    if (gpuEnabled)
+    {
+      std::cout << "compress using gpu!" << std::endl;
+        dataOutPtr = mgard_compress_cuda(mgardType, const_cast<double *>(static_cast<const double *>(dataIn)),
+        sizeOut, r[0], r[1], r[2], tolerance);
+	std::cout << "compress using gpu finished!" << std::endl;
+    }
+    else 
+    {
+        dataOutPtr = mgard_compress(
+           mgardType, const_cast<double *>(static_cast<const double *>(dataIn)),
+           sizeOut, r[0], r[1], r[2], tolerance, s);
+    }
     const size_t sizeOutT = static_cast<size_t>(sizeOut);
     std::memcpy(bufferOut, dataOutPtr, sizeOutT);
 
@@ -111,7 +135,7 @@ size_t CompressMGARD::Compress(const void *dataIn, const Dims &dimensions,
 size_t CompressMGARD::Decompress(const void *bufferIn, const size_t sizeIn,
                                  void *dataOut, const Dims &dimensions,
                                  const std::string type,
-                                 const Params & /*parameters*/) const
+                                 const Params &parameters) const
 {
     int mgardType = -1;
     size_t elementSize = 0;
@@ -141,11 +165,38 @@ size_t CompressMGARD::Decompress(const void *bufferIn, const size_t sizeIn,
     {
         r[ndims - i - 1] = static_cast<int>(dimensions[i]);
     }
+    // check if GPU is enabled
+    bool gpuEnabled = false;
+    int gpuFlag = 0;
+    auto itGPUFlag = parameters.find("gpu");
+    if (itGPUFlag != parameters.end())
+    {
+        gpuFlag = std::stoi(itGPUFlag->second);
+	std::cout<<"gpu flag: " <<gpuFlag<<std::endl;
+	if (gpuFlag) 
+	{
+            gpuEnabled = true;
+	}
+    }
 
-    void *dataPtr = mgard_decompress(
-        mgardType,
+    double dummy;
+    void *dataPtr;
+    if (gpuEnabled)
+    {
+      std::cout << "decompress using gpu!" << std::endl;
+        dataPtr = mgard_decompress_cuda(
+				     mgardType, dummy, 
+        reinterpret_cast<unsigned char *>(const_cast<void *>(bufferIn)),
+        static_cast<int>(sizeIn), r[0], r[1], r[2]);        
+	std::cout << "decompress using gpu finished!" << std::endl;
+    }
+    else
+    {
+        dataPtr = mgard_decompress(
+				     mgardType, dummy, 
         reinterpret_cast<unsigned char *>(const_cast<void *>(bufferIn)),
         static_cast<int>(sizeIn), r[0], r[1], r[2], 0);
+    }
 
     const size_t dataSizeBytes = helper::GetTotalSize(dimensions) * elementSize;
     std::memcpy(dataOut, dataPtr, dataSizeBytes);
