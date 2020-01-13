@@ -222,6 +222,22 @@ void Variable<T>::CheckRandomAccess(const size_t step,
     }
 }
 
+template <class T>
+void Variable<T>::InsertLevelInfo(size_t levelID, Info info)
+{
+    if (m_AllLevels.find(levelID) == m_AllLevels.end())                    
+    {                                                                      
+        Level level;                                                       
+        level.LevelID = levelID;                                           
+        m_AllLevels[levelID] = level;                        
+        m_AllLevels[levelID].LevelBlocksInfo.push_back(info);              
+    }                                                                      
+    else                                                                   
+    {                                                                      
+        m_AllLevels[levelID].LevelBlocksInfo.push_back(info);              
+    }                                                                       
+}
+
 // Span functions
 template <class T>
 Span<T>::Span(Engine &engine, const size_t size)

@@ -106,10 +106,19 @@ public:
         SelectionType Selection = SelectionType::BoundingBox;
         bool IsValue = false;
         bool IsReverseDims = false;
+        size_t ActualDataSize = 0;
     };
 
     /** use for multiblock info */
     std::vector<Info> m_BlocksInfo;
+
+    struct Level
+    {
+        size_t LevelID = 0;
+        std::vector<Info> LevelBlocksInfo;
+    };
+
+    std::unordered_map<size_t, Level> m_AllLevels;
 
     using Span = core::Span<T>;
 
@@ -124,6 +133,9 @@ public:
     ~Variable<T>() = default;
 
     Info &SetBlockInfo(const T *data, const size_t stepsStart,
+                       const size_t stepsCount = 1) noexcept;
+
+    void SetLevelBlockInfo(const T *data, const size_t levelID, const size_t actualDataSize, const size_t stepsStart,
                        const size_t stepsCount = 1) noexcept;
 
     void SetData(const T *data) noexcept;
@@ -160,6 +172,8 @@ private:
     DoAllStepsBlocksInfo() const;
 
     void CheckRandomAccess(const size_t step, const std::string hint) const;
+
+    void InsertLevelInfo(size_t levelID, Info info);
 };
 
 } // end namespace core

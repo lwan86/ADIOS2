@@ -26,6 +26,8 @@
 #include "adios2/engine/nullcore/NullCoreWriter.h"
 #include "adios2/engine/skeleton/SkeletonReader.h"
 #include "adios2/engine/skeleton/SkeletonWriter.h"
+#include "adios2/engine/sirius/SiriusReader.h"
+#include "adios2/engine/sirius/SiriusWriter.h"
 
 #include "adios2/helper/adiosComm.h"
 #include "adios2/helper/adiosFunctions.h" //BuildParametersMap
@@ -729,6 +731,15 @@ Engine &IO::Open(const std::string &name, const Mode mode, helper::Comm comm)
                 "ERROR: nullcore engine does not support read mode");
         else
             engine = std::make_shared<engine::NullCoreWriter>(*this, name, mode,
+                                                              std::move(comm));
+    }
+    else if (engineTypeLC == "sirius")
+    {
+        if (mode == Mode::Read)
+            engine = std::make_shared<engine::SiriusReader>(*this, name, mode,
+                                                              std::move(comm));
+        else
+            engine = std::make_shared<engine::SiriusWriter>(*this, name, mode,
                                                               std::move(comm));
     }
     else

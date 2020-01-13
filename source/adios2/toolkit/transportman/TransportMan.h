@@ -117,6 +117,8 @@ public:
      */
     std::vector<std::string> GetTransportsTypes() noexcept;
 
+    std::string GetTransportType(const size_t transportIndex = 0) noexcept;
+
     /** Returns a vector of pointer references (not owning the memory) to
      * m_Transports.m_Profiler */
     std::vector<profiling::IOChrono *> GetTransportsProfilers() noexcept;

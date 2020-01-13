@@ -60,6 +60,9 @@ add_library(adios2
   engine/null/NullEngine.cpp
 
   engine/nullcore/NullCoreWriter.cpp engine/nullcore/NullCoreWriter.tcc
+
+  engine/sirius/SiriusReader.cpp engine/sirius/SiriusReader.tcc
+  engine/sirius/SiriusWriter.cpp engine/sirius/SiriusWriter.tcc
 #toolkit
   toolkit/format/buffer/Buffer.cpp
   toolkit/format/buffer/heap/BufferSTL.cpp

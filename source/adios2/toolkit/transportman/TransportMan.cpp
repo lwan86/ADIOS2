@@ -181,6 +181,16 @@ std::vector<std::string> TransportMan::GetTransportsTypes() noexcept
     return types;
 }
 
+std::string TransportMan::GetTransportType(const size_t transportIndex) noexcept
+{
+
+    auto itTransport = m_Transports.find(transportIndex);
+    CheckFile(itTransport, ", in call to SeekToFileEnd with index " +
+                               std::to_string(transportIndex));
+    std::string type(itTransport->second->m_Type + "_" +itTransport->second->m_Library);
+    return type;
+}
+
 std::vector<profiling::IOChrono *>
 TransportMan::GetTransportsProfilers() noexcept
 {

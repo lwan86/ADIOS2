@@ -53,6 +53,27 @@ namespace core
         m_BlocksInfo.push_back(info);                                          \
         return m_BlocksInfo.back();                                            \
     }                                                                          \
+    template <>                                                                \
+    void Variable<T>::SetLevelBlockInfo(const T *data, const size_t levelID, const size_t actualDataSize,  \
+                                        const size_t stepsStart,               \
+                                        const size_t stepsCount) noexcept      \
+    {                                                                          \
+        Info info;                                                             \
+        info.Shape = m_Shape;                                                  \
+        info.Start = m_Start;                                                  \
+        info.Count = m_Count;                                                  \
+        info.BlockID = m_BlockID;                                              \
+        info.Selection = m_SelectionType;                                      \
+        info.MemoryStart = m_MemoryStart;                                      \
+        info.MemoryCount = m_MemoryCount;                                      \
+        info.StepsStart = stepsStart;                                          \
+        info.StepsCount = stepsCount;                                          \
+        info.Data = const_cast<T *>(data);                                     \
+        info.BufferP = info.Data;                                              \
+        info.Operations = m_Operations;                                        \
+        info.ActualDataSize = actualDataSize;                                                                       \
+        InsertLevelInfo(levelID, info);                                        \
+    }                                                                          \
                                                                                \
     template <>                                                                \
     void Variable<T>::SetData(const T *data) noexcept                          \
