@@ -54,7 +54,7 @@ namespace core
         return m_BlocksInfo.back();                                            \
     }                                                                          \
     template <>                                                                \
-    void Variable<T>::SetLevelBlockInfo(const T *data, const size_t levelID, const size_t actualDataSize,  \
+    typename Variable<T>::Info &Variable<T>::SetLevelBlockInfo(const T *data, const size_t levelID, std::vector<Operation> levelOperations,  \
                                         const size_t stepsStart,               \
                                         const size_t stepsCount) noexcept      \
     {                                                                          \
@@ -70,9 +70,9 @@ namespace core
         info.StepsCount = stepsCount;                                          \
         info.Data = const_cast<T *>(data);                                     \
         info.BufferP = info.Data;                                              \
-        info.Operations = m_Operations;                                        \
-        info.ActualDataSize = actualDataSize;                                                                       \
-        InsertLevelInfo(levelID, info);                                        \
+        info.Operations = levelOperations;                                        \
+        InsertLevelInfo(levelID, info);                                        \ 
+        return m_AllLevels[levelID].LevelBlocksInfo.back();                     \
     }                                                                          \
                                                                                \
     template <>                                                                \

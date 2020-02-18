@@ -106,7 +106,6 @@ public:
         SelectionType Selection = SelectionType::BoundingBox;
         bool IsValue = false;
         bool IsReverseDims = false;
-        size_t ActualDataSize = 0;
     };
 
     /** use for multiblock info */
@@ -135,7 +134,7 @@ public:
     Info &SetBlockInfo(const T *data, const size_t stepsStart,
                        const size_t stepsCount = 1) noexcept;
 
-    void SetLevelBlockInfo(const T *data, const size_t levelID, const size_t actualDataSize, const size_t stepsStart,
+    Info &SetLevelBlockInfo(const T *data, const size_t levelID, std::vector<Operation> levelOperations, const size_t stepsStart,
                        const size_t stepsCount = 1) noexcept;
 
     void SetData(const T *data) noexcept;

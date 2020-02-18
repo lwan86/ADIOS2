@@ -96,6 +96,16 @@ std::string BP4Base::GetBPMetadataIndexFileName(const std::string &name) const
     return bpMetaDataIndexRankName;
 }
 
+std::string BP4Base::GetBPDataLocationFileName(const std::string &name) const
+    noexcept
+{
+    const std::string bpName = RemoveTrailingSlash(name);
+    /* the name of the metadata index file is "md.idx" */
+    const std::string bpDataLocationFileName(bpName + PathSeparator +
+                                              "md.loc");
+    return bpDataLocationFileName;
+}
+
 std::vector<std::string>
 BP4Base::GetBPSubStreamNames(const std::vector<std::string> &names) const
     noexcept

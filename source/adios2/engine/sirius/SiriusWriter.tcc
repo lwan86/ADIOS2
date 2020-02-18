@@ -12,6 +12,13 @@
 
 #include "SiriusWriter.h"
 
+// compress
+#ifdef ADIOS2_HAVE_BZIP2
+#include "adios2/operator/compress/CompressBZIP2.h"
+#endif
+
+#include "adios2/core/Operator.h"
+
 #include <iostream>
 #include <cmath>
 
@@ -25,36 +32,36 @@ namespace engine
 template <class T>
 void SiriusWriter::PutSyncCommon(Variable<T> &variable, const T *data)
 {
+    // size_t preCount = 0;
     for (size_t i = 0; i < m_Levels; i++)
     {
         std::cout << "level " << i << std::endl;
-        size_t originalDataSize = helper::PayloadSize(data, variable.m_Count);
-        size_t originalDataCount = std::accumulate(variable.m_Count.begin(), variable.m_Count.end(),
-                           static_cast<size_t>(1), std::multiplies<size_t>());
-        size_t actualCount = originalDataCount/std::pow(2, i);
-        std::cout << "original data count: " << originalDataCount << ", actual data count: " << actualCount << std::endl; 
-        T *actualData = new T[actualCount];
-        std::cout << "original data: " << std::endl;
-        std::cout << "[";
-        size_t count = 0;
-        for (size_t j = 0; j < originalDataCount; j++)
-        {
-            std::cout << data[j] << ", ";
-            if (j%int(std::pow(2, i)) == 0)
-            {
-                if (count == actualCount)
-                {
-                    break;
-                }
-                *actualData = data[j];
-                actualData++;
-                count++;
-            }        
-        }
-        std::cout << "]" << std::endl;
-        size_t actualDataSize = actualCount*sizeof(T);
-        std::cout << "original data size: " << originalDataSize << ", actual data size: " << actualDataSize << std::endl;
-        variable.SetLevelBlockInfo(actualData, i, actualDataSize, CurrentStep());
+        // size_t originalDataSize = helper::PayloadSize(data, variable.m_Count);
+        size_t originalElementsCount = std::accumulate(variable.m_Count.begin(), variable.m_Count.end(),
+                            static_cast<size_t>(1), std::multiplies<size_t>());
+        double percentage = std::stod(m_AllLevels[i]["percentage"]);
+        std::cout << "% of original data: " << percentage << std::endl;
+        // int blockSize100k = 1;
+        // int verbosity = 0;
+        // int workFactor = 0;
+        Params parameters = {};
+        // const std::string hint(" in call to BZIP2 Compress\n");
+        // helper::SetParameterValueInt("blockSize100k", parameters, blockSize100k,
+        //                              m_DebugMode, hint);
+        // helper::SetParameterValueInt("verbosity", parameters, verbosity,
+        //                              m_DebugMode, hint);
+        // helper::SetParameterValueInt("workFactor", parameters, workFactor,
+        //                              m_DebugMode, hint);
+        
+        // adios2::core::Operator op("bzip2", parameters, m_DebugMode);
+        
+        //operatorPtr = std::make_shared<adios2::core::compress::CompressBZIP2>(parameters, m_DebugMode);
+        adios2::core::compress::CompressBZIP2 op(parameters, m_DebugMode);
+        std::vector<adios2::core::VariableBase::Operation> levelOperations;
+        levelOperations.push_back(adios2::core::VariableBase::Operation{&op, parameters, Params()});
+        std::cout << levelOperations.back().Op->m_Type << std::endl;
+ 
+        const typename Variable<T>::Info blockInfo = variable.SetLevelBlockInfo(data, i, levelOperations, CurrentStep(i), 1);
         std::cout << "  level id has been set to " << variable.m_AllLevels[i].LevelID << std::endl;
         for (auto info : variable.m_AllLevels[i].LevelBlocksInfo)
         {
@@ -77,11 +84,47 @@ void SiriusWriter::PutSyncCommon(Variable<T> &variable, const T *data)
             {
                 std::cout << dim << ", ";
             }
-            std::cout << "]" << std::endl;            
+            std::cout << "]" << std::endl;   
+            std::cout << "      operations: [";
+            for (auto operation : info.Operations)
+            {
+                std::cout << operation.Op->m_Type << ", ";
+            }
+            std::cout << "]" << std::endl;          
             std::cout << "      steps start: " << info.StepsStart << std::endl;
             std::cout << "      steps count: " << info.StepsStart << std::endl;
         }
-        
+                // if first timestep Write create a new pg index
+        if (!m_AllBP4Serializers.at(i).m_MetadataSet.DataPGIsOpen)
+        {
+            m_AllBP4Serializers.at(i).PutProcessGroupIndex(
+                m_IO.m_Name, m_IO.m_HostLanguage,
+                m_FileDataManager.GetTransportsTypes());
+        }
+
+        const size_t dataSize = helper::PayloadSize(blockInfo.Data, blockInfo.Count) +
+            m_AllBP4Serializers.at(i).GetBPIndexSizeInData(variable.m_Name, blockInfo.Count);
+
+        const format::BP4Base::ResizeResult resizeResult =
+            m_AllBP4Serializers.at(i).ResizeBuffer(dataSize, "in call to variable " +
+                                                    variable.m_Name + " Put");
+
+        if (resizeResult == format::BP4Base::ResizeResult::Flush)
+        {
+            DoFlush(false, i);
+            m_AllBP4Serializers.at(i).ResetBuffer(m_AllBP4Serializers.at(i).m_Data);
+
+            // new group index for incoming variable
+            m_AllBP4Serializers.at(i).PutProcessGroupIndex(
+                m_IO.m_Name, m_IO.m_HostLanguage,
+                m_FileDataManager.GetTransportsTypes());
+        }
+
+        // WRITE INDEX to data buffer and metadata structure (in memory)//
+        const bool sourceRowMajor = helper::IsRowMajor(m_IO.m_HostLanguage);
+        m_AllBP4Serializers.at(i).PutVariableMetadata(variable, blockInfo, sourceRowMajor);
+        m_AllBP4Serializers.at(i).PutVariablePayload(variable, blockInfo, sourceRowMajor);
+
     }
 
 }

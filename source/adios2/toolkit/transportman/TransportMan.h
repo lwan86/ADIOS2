@@ -170,6 +170,8 @@ public:
     /** Checks if all transports are closed */
     bool AllTransportsClosed() const noexcept;
 
+    bool TransportClosed(const int transportIndex);
+
     void SeekToFileEnd(const int transportIndex = 0);
 
     void SeekToFileBegin(const int transportIndex = 0);

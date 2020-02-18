@@ -336,6 +336,19 @@ bool TransportMan::AllTransportsClosed() const noexcept
     return allClose;
 }
 
+bool TransportMan::TransportClosed(const int transportIndex)
+{
+    bool closed = true;
+    auto itTransport = m_Transports.find(transportIndex);
+    CheckFile(itTransport, ", in call to TransportClosed with index " +
+                                   std::to_string(transportIndex));
+    if (itTransport->second->m_IsOpen)
+    {
+        closed = false;
+    }
+    return closed;
+}
+
 // PRIVATE
 std::shared_ptr<Transport>
 TransportMan::OpenFileTransport(const std::string &fileName,

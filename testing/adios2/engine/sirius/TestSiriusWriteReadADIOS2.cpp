@@ -63,9 +63,10 @@ TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
     {
         adios2::IO io = adios.DeclareIO("TestIO");
         io.SetEngine("Sirius");
-        io.SetParameter("Levels", "2");
-        io.AddTransport("File", {{"level id", "0"}, {"location", "/Users/lwk/Research/Projects/adios2/dev/pfs"}});
-        io.AddTransport("File", {{"level id", "1"}, {"location", "/Users/lwk/Research/Projects/adios2/dev/bb"}});
+        io.SetParameter("Levels", "3");
+        io.AddTransport("File", {{"level id", "0"}, {"location", "/Users/lwk/Research/Projects/adios2/dev/bb"}, {"percentage","0.2"}, {"primary","false"}});
+        io.AddTransport("File", {{"level id", "1"}, {"location", "/Users/lwk/Research/Projects/adios2/dev/pfs"}, {"percentage","0.5"}, {"primary","true"}});
+        io.AddTransport("File", {{"level id", "2"}, {"location", "/Users/lwk/Research/Projects/adios2/dev/tape"}, {"percentage","0.3"}, {"primary","false"}});
 
         // Declare 2D variables (Ny * (NumOfProcesses * Nx))
         // The local process' part (start, count) can be defined now or later

@@ -44,16 +44,20 @@ public:
 
     StepStatus BeginStep(StepMode mode,
                          const float timeoutSeconds = -1.0) final;
-    size_t CurrentStep() const final;
+    size_t CurrentStep(const int transportIndex);
     void PerformPuts() final;
     void EndStep() final;
-    void Flush(const int transportIndex = -1) final;
+    void Flush(const int transportIndex) final;
 
 private:
 
     /**  controlling BP buffering for each tier */
     //std::unordered_map<std::string, format::BP4Serializer> m_TransportID2BP4Serializer;
     std::unordered_map<size_t, format::BP4Serializer> m_AllBP4Serializers;
+
+    std::unordered_map<size_t, std::unordered_map<std::string, std::string>> m_AllLevels;
+
+    adios2::format::BufferSTL m_LevelIndex;
 
     /** Manage BP data files Transports from IO AddTransport */
     transportman::TransportMan m_FileDataManager;
@@ -64,22 +68,24 @@ private:
     /* transport manager for managing the metadata index file */
     transportman::TransportMan m_FileMetadataIndexManager;
 
+    transportman::TransportMan m_FileDataLocationManager;
+
     /** Allocates memory and starts a PG group */
     void InitBPBuffer();
 
 
     int m_Verbosity = 0;
-    int m_WriterRank;       // my rank in the writers' comm
-    int m_CurrentStep = -1; // steps start from 0
+    // int m_WriterRank;       // my rank in the writers' comm
+    // int m_CurrentStep = -1; // steps start from 0
 
     int m_Levels = 1;
 
     // EndStep must call PerformPuts if necessary
     bool m_NeedPerformPuts = false;
 
-    void Init() final;
+    //void Init() final;
     void InitParameters() final;
-    void InitTransports() final;
+    //void InitTransports() final;
 
 #define declare_type(T)                                                        \
     void DoPutSync(Variable<T> &, const T *) final;                            \
@@ -93,7 +99,23 @@ private:
      * otherwise it closes a transport in m_Transport[transportIndex].
      * In debug mode the latter is bounds-checked.
      */
-    void DoClose(const int transportIndex = -1) final;
+    void DoClose(const int transportIndex) final;
+
+    void WriteData(const bool isFinal, const int transportIndex);
+
+    void AggregateWriteData(const bool isFinal, const int transportIndex);
+
+    void DoFlush(const bool isFinal, const int transportIndex);
+
+    void UpdateActiveFlag(const bool active, const int transportIndex);
+
+    void WriteCollectiveMetadataFile(const bool isFinal, const int transportIndex);
+
+    void PopulateMetadataIndexFileContent(
+    format::BufferSTL &b, const uint64_t currentStep, const uint64_t mpirank,
+    const uint64_t pgIndexStart, const uint64_t variablesIndexStart,
+    const uint64_t attributesIndexStart, const uint64_t currentStepEndPos,
+    const uint64_t currentTimeStamp);
 
     /**
      * Common function for primitive PutSync, puts variables in buffer
