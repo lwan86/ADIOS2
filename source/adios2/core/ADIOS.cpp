@@ -36,6 +36,10 @@
 #include "adios2/operator/compress/CompressMGARD.h"
 #endif
 
+#ifdef ADIOS2_HAVE_WAVELET
+#include "adios2/operator/compress/CompressWavelet.h"
+#endif
+
 #ifdef ADIOS2_HAVE_BZIP2
 #include "adios2/operator/compress/CompressBZIP2.h"
 #endif
@@ -215,6 +219,17 @@ Operator &ADIOS::DefineOperator(const std::string &name, const std::string type,
         operatorPtr = itPair.first->second;
 #else
         throw std::invalid_argument(lf_ErrorMessage("MGARD"));
+#endif
+    }
+    else if (typeLowerCase == "wavelet")
+    {
+#ifdef ADIOS2_HAVE_WAVELET
+        auto itPair = m_Operators.emplace(
+            name,
+            std::make_shared<compress::CompressWavelet>(parameters, m_DebugMode));
+        operatorPtr = itPair.first->second;
+#else
+        throw std::invalid_argument(lf_ErrorMessage("Wavelet"));
 #endif
     }
     else if (typeLowerCase == "png")

@@ -16,6 +16,7 @@
 #include "adios2/toolkit/format/bp/bpOperation/compress/BPBZIP2.h"
 #include "adios2/toolkit/format/bp/bpOperation/compress/BPBlosc.h"
 #include "adios2/toolkit/format/bp/bpOperation/compress/BPMGARD.h"
+#include "adios2/toolkit/format/bp/bpOperation/compress/BPWavelet.h"
 #include "adios2/toolkit/format/bp/bpOperation/compress/BPPNG.h"
 #include "adios2/toolkit/format/bp/bpOperation/compress/BPSZ.h"
 #include "adios2/toolkit/format/bp/bpOperation/compress/BPZFP.h"
@@ -364,7 +365,7 @@ std::string BPBase::ReadBPString(const std::vector<char> &buffer,
 
 // static members
 const std::set<std::string> BPBase::m_TransformTypes = {
-    {"unknown", "none", "identity", "bzip2", "sz", "zfp", "mgard", "png",
+    {"unknown", "none", "identity", "bzip2", "sz", "zfp", "mgard", "wavelet", "png",
      "blosc"}};
 
 const std::map<int, std::string> BPBase::m_TransformTypesToNames = {
@@ -372,7 +373,7 @@ const std::map<int, std::string> BPBase::m_TransformTypesToNames = {
     {transform_identity, "identity"}, {transform_sz, "sz"},
     {transform_zfp, "zfp"},           {transform_mgard, "mgard"},
     {transform_png, "png"},           {transform_bzip2, "bzip2"},
-    {transform_blosc, "blosc"}};
+    {transform_blosc, "blosc"}, {transform_wavelet, "wavelet"}};
 
 BPBase::TransformTypes
 BPBase::TransformTypeEnum(const std::string transformType) const noexcept
@@ -405,6 +406,10 @@ BPBase::SetBPOperation(const std::string type) const noexcept
     else if (type == "mgard")
     {
         bpOp = std::make_shared<BPMGARD>();
+    }
+    else if (type == "wavelet")
+    {
+        bpOp = std::make_shared<BPWavelet>();
     }
     else if (type == "bzip2")
     {

@@ -46,6 +46,10 @@ if(ADIOS2_HAVE_MGARD)
   target_link_libraries(adios_reorganize MGARD::MGARD)
 endif()
 
+if(ADIOS2_HAVE_Wavelet)
+  target_link_libraries(adios_reorganize Wavelet::Wavelet)
+endif()
+
 if(ADIOS2_HAVE_MPI)
   add_subdirectory(adios_iotest)
 endif()

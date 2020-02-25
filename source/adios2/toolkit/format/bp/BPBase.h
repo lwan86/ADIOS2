@@ -424,7 +424,8 @@ protected:
         transform_lz4 = 10,
         transform_blosc = 11,
         transform_mgard = 12,
-        transform_png = 13
+        transform_png = 13,
+        transform_wavelet = 14
     };
 
     /** Supported transform types */

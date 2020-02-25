@@ -13,6 +13,10 @@
 #include <numeric> //std::iota
 #include <stdexcept>
 
+#include <fstream>
+#include <string>
+#include <vector>
+
 #include <adios2.h>
 
 #include <gtest/gtest.h>
@@ -27,6 +31,58 @@ public:
     SmallTestData m_TestData;
 };
 
+bool getFileContent(std::string fileName, std::vector<double> & values, unsigned int & rows, unsigned int & cols)
+{
+ 
+	// Open the File
+	std::ifstream in(fileName.c_str());
+ 
+	// Check if object is valid
+	if(!in)
+	{
+		std::cerr << "cannot open the file : "<<fileName<<std::endl;
+		return false;
+	}
+ 
+    rows = 0;
+    cols = 0;
+	std::string str;
+    std::string delimiter = ",";
+	// Read the next line from File untill it reaches the end.
+	while (std::getline(in, str))
+	{
+		// Line contains string of length > 0 then save it in vector
+		if(str.size() > 0)
+        {
+            //std::cout << str << std::endl;
+            size_t pos = 0;
+            std::string token;
+            while ((pos = str.find(delimiter)) != std::string::npos) {
+                token = str.substr(0, pos);
+                double val = std::stod(token); 
+                std::cout << val << ", ";
+                values.push_back(val);
+                str.erase(0, pos + delimiter.length());
+                if (rows == 0)
+                {
+                    cols++;
+                }
+            }
+            double val = std::stod(str); 
+            std::cout << val << std::endl;
+            values.push_back(val);
+            if (rows == 0)
+            {
+                cols++;
+            }
+        }
+        rows++;
+			
+	}
+	//Close The File
+	in.close();
+	return true;
+}
 //******************************************************************************
 // 2D 2x4 test data
 //******************************************************************************
@@ -34,19 +90,25 @@ public:
 // ADIOS2 Sirius write, native ADIOS1 read
 TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
 {
-    // Each process would write a 2x4 array and all processes would
-    // form a 2D 2 * (numberOfProcess*Nx) matrix where Nx is 4 here
+    // Each process would write a 16x16 array 
     const std::string fname("ADIOS2SiriusWriteRead2DTest.bp");
+
+    unsigned int rows, cols;
+    std::vector<double> v;
+    //getFileContent("nonsqr.csv", v, rows, cols);
+    getFileContent("small.csv", v, rows, cols);
+    std::cout << "input vector size: " << v.size() << std::endl;
+    std::cout << "array shape: " << rows << "x" << cols << std::endl;  
 
     int mpiRank = 0, mpiSize = 1;
     // Number of rows
-    const std::size_t Nx = 8;
+    const std::size_t Nx = rows;
 
-    // Number of rows
-    const std::size_t Ny = 8;
+    // Number of cols
+    const std::size_t Ny = cols;
 
     // Number of steps
-    const std::size_t NSteps = 3;
+    const std::size_t NSteps = 1;
 
 #ifdef ADIOS2_HAVE_MPI
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
@@ -72,9 +134,11 @@ TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
         // The local process' part (start, count) can be defined now or later
         // before Write().
         {
-            const adios2::Dims shape{Ny, static_cast<size_t>(Nx * mpiSize)};
-            const adios2::Dims start{0, static_cast<size_t>(mpiRank * Nx)};
-            const adios2::Dims count{Ny, Nx};
+            //const adios2::Dims shape{Ny, static_cast<size_t>(Nx * mpiSize)};
+            //const adios2::Dims start{0, static_cast<size_t>(mpiRank * Nx)};
+            const adios2::Dims shape{Nx, Ny};
+            const adios2::Dims start{0, 0};
+            const adios2::Dims count{Nx, Ny};
 
             // auto var_iString = io.DefineVariable<std::string>("iString");
             // auto var_i8 = io.DefineVariable<int8_t>("i8", shape, start, count);
@@ -101,8 +165,9 @@ TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
         for (size_t step = 0; step < NSteps; ++step)
         {
             // Generate test data for each process uniquely
-            SmallTestData currentTestData = generateNewSmallTestData(
-                m_TestData, static_cast<int>(step), mpiRank, mpiSize);
+            // SmallTestData currentTestData = generateNewSmallTestData(
+            //     m_TestData, static_cast<int>(step), mpiRank, mpiSize);
+          
 
             // Retrieve the variables that previously went out of scope
             // auto var_iString = io.InquireVariable<std::string>("iString");
@@ -119,8 +184,8 @@ TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
 
             // Make a 2D selection to describe the local dimensions of the
             // variable we write and its offsets in the global spaces
-            adios2::Box<adios2::Dims> sel(
-                {0, static_cast<size_t>(mpiRank * Nx)}, {Ny, Nx});
+            // adios2::Box<adios2::Dims> sel(
+            //     {0, static_cast<size_t>(mpiRank * Nx)}, {Ny, Nx});
             // var_i8.SetSelection(sel);
             // var_i16.SetSelection(sel);
             // var_i32.SetSelection(sel);
@@ -130,7 +195,7 @@ TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
             // var_u32.SetSelection(sel);
             // var_u64.SetSelection(sel);
             // var_r32.SetSelection(sel);
-            var_r64.SetSelection(sel);
+            // var_r64.SetSelection(sel);
 
             // Write each one
             // fill in the variable with values from starting index to
@@ -146,15 +211,16 @@ TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
             // SiriusWriter.Put(var_u32, currentTestData.U32.data());
             // SiriusWriter.Put(var_u64, currentTestData.U64.data());
             // SiriusWriter.Put(var_r32, currentTestData.R32.data());
-            std::cout << "original data: " << std::endl;
-            std::cout << "[";        
-            for (size_t i = 0; i < Nx * Ny; ++i)
-            {
-                std::cout << currentTestData.R64[i] << ", ";
-            }
-            std::cout << "]" << std::endl;
+            // std::cout << "original data: " << std::endl;
+            // std::cout << "[";        
+            // for (size_t i = 0; i < Nx * Ny; ++i)
+            // {
+            //     std::cout << currentTestData.R64[i] << ", ";
+            // }
+            // std::cout << "]" << std::endl;
             
-            SiriusWriter.Put(var_r64, currentTestData.R64.data());
+            // SiriusWriter.Put(var_r64, currentTestData.R64.data());
+            SiriusWriter.Put(var_r64, v.data());
             SiriusWriter.PerformPuts();
 
             SiriusWriter.EndStep();
@@ -164,7 +230,7 @@ TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
         SiriusWriter.Close();
     }
 
-    {
+/*     {
         adios2::IO io = adios.DeclareIO("ReadIO");
 
         io.SetEngine("Sirius");
@@ -334,7 +400,7 @@ TEST_F(SiriusWriteReadTestADIOS2, ADIOS2SiriusWriteRead2D)
             }
         }
         SiriusReader.Close();
-    }
+    } */
 }
 
 //******************************************************************************

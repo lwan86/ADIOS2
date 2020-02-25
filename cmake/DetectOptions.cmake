@@ -59,6 +59,16 @@ if(MGARD_FOUND)
   set(ADIOS2_HAVE_MGARD TRUE)
 endif()
 
+# Wavelet
+if(ADIOS2_USE_Wavelet STREQUAL AUTO)
+  find_package(Wavelet)
+elseif(ADIOS2_USE_Wavelet)
+  find_package(Wavelet REQUIRED)
+endif()
+if(WAVELET_FOUND)
+  set(ADIOS2_HAVE_Wavelet TRUE)
+endif()
+
 # PNG
 if(ADIOS2_USE_PNG STREQUAL AUTO)
   find_package(PNG 1.6.0)

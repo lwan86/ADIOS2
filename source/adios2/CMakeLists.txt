@@ -84,6 +84,7 @@ add_library(adios2
   toolkit/format/bp/bpOperation/compress/BPZFP.tcc
   toolkit/format/bp/bpOperation/compress/BPSZ.cpp
   toolkit/format/bp/bpOperation/compress/BPMGARD.cpp
+  toolkit/format/bp/bpOperation/compress/BPWavelet.cpp
   toolkit/format/bp/bpOperation/compress/BPPNG.cpp
   toolkit/format/bp/bpOperation/compress/BPBZIP2.cpp 
   toolkit/format/bp/bpOperation/compress/BPBZIP2.tcc
@@ -223,6 +224,11 @@ endif()
 if(ADIOS2_HAVE_MGARD)
   target_sources(adios2 PRIVATE operator/compress/CompressMGARD.cpp)
   target_link_libraries(adios2 PRIVATE MGARD::MGARD)
+endif()
+
+if(ADIOS2_HAVE_Wavelet)
+  target_sources(adios2 PRIVATE operator/compress/CompressWavelet.cpp)
+  target_link_libraries(adios2 PRIVATE Wavelet::Wavelet)
 endif()
 
 if(ADIOS2_HAVE_PNG)

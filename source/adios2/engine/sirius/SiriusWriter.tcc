@@ -17,6 +17,10 @@
 #include "adios2/operator/compress/CompressBZIP2.h"
 #endif
 
+#ifdef ADIOS2_HAVE_WAVELET
+#include "adios2/operator/compress/CompressWavelet.h"
+#endif
+
 #include "adios2/core/Operator.h"
 
 #include <iostream>
@@ -41,22 +45,11 @@ void SiriusWriter::PutSyncCommon(Variable<T> &variable, const T *data)
                             static_cast<size_t>(1), std::multiplies<size_t>());
         double percentage = std::stod(m_AllLevels[i]["percentage"]);
         std::cout << "% of original data: " << percentage << std::endl;
-        // int blockSize100k = 1;
-        // int verbosity = 0;
-        // int workFactor = 0;
-        Params parameters = {};
-        // const std::string hint(" in call to BZIP2 Compress\n");
-        // helper::SetParameterValueInt("blockSize100k", parameters, blockSize100k,
-        //                              m_DebugMode, hint);
-        // helper::SetParameterValueInt("verbosity", parameters, verbosity,
-        //                              m_DebugMode, hint);
-        // helper::SetParameterValueInt("workFactor", parameters, workFactor,
-        //                              m_DebugMode, hint);
-        
-        // adios2::core::Operator op("bzip2", parameters, m_DebugMode);
-        
-        //operatorPtr = std::make_shared<adios2::core::compress::CompressBZIP2>(parameters, m_DebugMode);
-        adios2::core::compress::CompressBZIP2 op(parameters, m_DebugMode);
+
+        //Params parameters = {};
+        Params parameters = {{"wavelet_name", "haar"}, {"total_levels", "3"}, {"level_id", std::to_string(i)}};
+        //adios2::core::compress::CompressBZIP2 op(parameters, m_DebugMode);
+        adios2::core::compress::CompressWavelet op(parameters, m_DebugMode);
         std::vector<adios2::core::VariableBase::Operation> levelOperations;
         levelOperations.push_back(adios2::core::VariableBase::Operation{&op, parameters, Params()});
         std::cout << levelOperations.back().Op->m_Type << std::endl;
