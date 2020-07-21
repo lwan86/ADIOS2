@@ -109,6 +109,9 @@ public:
     std::string GetBPMetadataIndexFileName(const std::string &name) const
         noexcept;
 
+    std::string GetBPDataLocationFileName(const std::string &name) const
+        noexcept;
+
     std::string GetBPSubFileName(const std::string &name,
                                  const size_t subFileIndex,
                                  const bool hasSubFiles = true,

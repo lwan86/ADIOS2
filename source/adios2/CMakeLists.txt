@@ -60,6 +60,9 @@ add_library(adios2
   engine/null/NullEngine.cpp
 
   engine/nullcore/NullCoreWriter.cpp engine/nullcore/NullCoreWriter.tcc
+
+	engine/sirius/SiriusReader.cpp engine/sirius/SiriusReader.tcc
+  engine/sirius/SiriusWriter.cpp engine/sirius/SiriusWriter.tcc
 #toolkit
   toolkit/format/buffer/Buffer.cpp
   toolkit/format/buffer/heap/BufferSTL.cpp
@@ -220,6 +223,15 @@ endif()
 if(ADIOS2_HAVE_MGARD)
   target_sources(adios2 PRIVATE operator/compress/CompressMGARD.cpp)
   target_link_libraries(adios2 PRIVATE MGARD::MGARD)
+endif()
+
+if(ADIOS2_HAVE_Wavelet)
+  target_sources(adios2 PRIVATE
+  engine/sirius/SiriusReader.cpp
+  engine/sirius/SiriusReader.tcc
+  engine/sirius/SiriusWriter.cpp
+  engine/sirius/SiriusWriter.tcc)
+  target_link_libraries(adios2 PRIVATE Wavelet::Wavelet)
 endif()
 
 if(ADIOS2_HAVE_PNG)

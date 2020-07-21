@@ -27,6 +27,8 @@
 #include "adios2/engine/nullcore/NullCoreWriter.h"
 #include "adios2/engine/skeleton/SkeletonReader.h"
 #include "adios2/engine/skeleton/SkeletonWriter.h"
+#include "adios2/engine/sirius/SiriusReader.h"
+#include "adios2/engine/sirius/SiriusWriter.h"
 
 #include "adios2/helper/adiosComm.h"
 #include "adios2/helper/adiosFunctions.h" //BuildParametersMap
@@ -133,6 +135,9 @@ std::unordered_map<std::string, IO::EngineFactoryEntry> Factory = {
     {"nullcore",
      {IO::NoEngine("ERROR: nullcore engine does not support read mode"),
       IO::MakeEngine<engine::NullCoreWriter>}},
+    {"sirius",
+     {IO::MakeEngine<engine::SiriusReader>,
+      IO::MakeEngine<engine::SiriusWriter>}},
 };
 
 // Synchronize access to the factory in case one thread is

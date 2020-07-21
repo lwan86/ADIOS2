@@ -52,6 +52,11 @@ if(NOT @BUILD_SHARED_LIBS@)
     find_dependency(DataSpaces)
   endif()
 
+  set(ADIOS2_HAVE_Wavelet @ADIOS2_HAVE_Wavelet@)
+  if(ADIOS2_HAVE_Wavelet)
+    find_dependency(Wavelet)
+  endif()
+  
   set(ADIOS2_HAVE_ZeroMQ @ADIOS2_HAVE_ZeroMQ@)
   if(ADIOS2_HAVE_ZeroMQ)
     find_dependency(ZeroMQ)
