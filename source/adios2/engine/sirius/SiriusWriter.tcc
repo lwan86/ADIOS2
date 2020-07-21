@@ -166,7 +166,7 @@ void SiriusWriter::PutSyncCommon(Variable<T> &variable, const T *data)
                 vertCoeffs = getWT2Coeffs(wt, waveletCoeffs, m_WaveletLevels-l, "V", &vr, &vc);
                 detailCoeffs = getWT2Coeffs(wt, waveletCoeffs, m_WaveletLevels-l, "D", &dr, &dc);  
 
-                Variable<T> var_A(variable.m_Name+"_"+std::to_string(l)+"_A", shape, start, count, constantDims, m_DebugMode);
+                //Variable<T> var_A(variable.m_Name+"_"+std::to_string(l)+"_A", shape, start, count, constantDims, m_DebugMode);
 
                 elementsOnCurrentTier = ar*ac+hr*hc+vr*vc+dr*dc;
 
